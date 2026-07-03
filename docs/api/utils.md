@@ -1,78 +1,72 @@
-# utils 对象
+# utils - 工具方法
 
-`utils` 对象提供各种实用工具方法，简化脚本编写。
+`utils` 对象提供通用的工具函数，包括延时、随机数、命令执行等。
+
+## 通用约定
+
+- 位置参数格式: `"x,y,z"` | 颜色代码: `&` 前缀 | 时间: tick（20tick=1秒）| 材质: 大写英文
 
 ## 方法列表
 
 | 方法 | 返回值 | 说明 |
 |------|--------|------|
-| `utils.random(min, max)` | int | 生成随机整数 |
-| `utils.randomDouble(min, max)` | double | 生成随机浮点数 |
-| `utils.chance(percent)` | boolean | 按百分比概率返回 true |
-| `utils.delay(ticks, callback)` | void | 延迟执行 |
-| `utils.color(text)` | String | 转换颜色代码 |
-| `utils.stripColor(text)` | String | 去除颜色代码 |
-| `utils.distance(x1, y1, z1, x2, y2, z2)` | double | 计算两点距离 |
-| `utils.format(template, ...args)` | String | 格式化字符串 |
-| `utils.runCommand(cmd)` | void | 以控制台执行命令 |
-| `utils.playerCommand(player, cmd)` | void | 以玩家身份执行命令 |
-| `utils.log(message)` | void | 输出到副本日志 |
+| `delay(ticks, callback)` | void | 延迟执行回调 |
+| `schedule(ticks, repeat, callback)` | int | 创建定时任务，返回任务 ID |
+| `cancelSchedule(taskId)` | void | 取消由 schedule 创建的任务 |
+| `random(min, max)` | int | 随机整数，范围 [min, max] |
+| `randomDouble(min, max)` | double | 随机浮点数，范围 [min, max) |
+| `broadcast(msg)` | void | 全服广播消息 |
+| `runCommand(cmd)` | void | 以控制台执行命令 |
+| `runCommandAsPlayer(name, cmd)` | void | 以指定玩家身份执行命令 |
+| `log(msg)` | void | 输出日志到控制台 |
 
 ## 使用示例
-
-### 随机与概率
-
-```javascript
-function on_monster_kill(player, monster) {
-    // 30% 概率掉落奖励
-    if (utils.chance(30)) {
-        var items = ["DIAMOND", "GOLD_INGOT", "EMERALD"];
-        var index = utils.random(0, items.length - 1);
-        player.give(items[index], 1);
-        player.message("&a你获得了奖励！");
-    }
-}
-```
 
 ### 延迟执行
 
 ```javascript
 function on_start() {
-    players.message("&e5秒后开始战斗...");
-    utils.delay(100, function() {
-        monsters.wave("wave_1", [
-            { type: "zombie", count: 5, x: 100, y: 65, z: 100 }
-        ]);
-        players.title("&c战斗开始！", "");
+    dungeon.broadcast("&e3秒后开始战斗...");
+    utils.delay(60, function() {
+        monsters.spawnMultiple("wave1", "ZOMBIE", "100,65,100", 10, 5);
+        dungeon.broadcast("&c战斗开始！");
     });
 }
 ```
 
-### 距离计算
+### 随机事件
 
 ```javascript
-function on_timer(id) {
-    if (id === "check_boss") {
-        var allPlayers = players.all();
-        for (var i = 0; i < allPlayers.length; i++) {
-            var loc = allPlayers[i].getLocation();
-            var dist = utils.distance(loc.x, loc.y, loc.z, 100, 65, 100);
-            if (dist > 30) {
-                allPlayers[i].message("&c你离Boss战场太远了！");
-            }
+function on_monster_kill() {
+    var roll = utils.random(1, 100);
+    if (roll <= 10) {
+        // 10% 概率掉落额外奖励
+        var player = trigger.getPlayerName();
+        utils.runCommandAsPlayer(player, "give " + player + " diamond 1");
+        dungeon.broadcast("&6" + player + " 获得了额外奖励！");
+    }
+}
+```
+
+### 自定义定时器
+
+```javascript
+function on_start() {
+    var taskId = utils.schedule(100, true, function() {
+        var count = monsters.getAliveCount("enemies");
+        dungeon.broadcast("&7剩余怪物: &c" + count);
+        if (count == 0) {
+            utils.cancelSchedule(taskId);
         }
-    }
+    });
 }
 ```
 
-### 执行命令
+## 注意事项
 
-```javascript
-function on_end() {
-    var allPlayers = players.all();
-    for (var i = 0; i < allPlayers.length; i++) {
-        // 给予奖励
-        utils.runCommand("give " + allPlayers[i].getName() + " diamond 5");
-    }
-}
-```
+- `delay` 是一次性延迟，`schedule` 可通过 `repeat` 参数决定是否循环
+- `schedule` 返回任务 ID，需保存以便后续取消
+- `random(min, max)` 包含两端（闭区间），`randomDouble` 不包含 max（左闭右开）
+- `broadcast` 是全服广播，与 `dungeon.broadcast` 不同（后者仅副本内）
+- `runCommand` 以控制台权限执行，`runCommandAsPlayer` 以玩家权限执行
+- `log` 输出到服务器控制台，用于调试

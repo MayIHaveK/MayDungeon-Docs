@@ -1,47 +1,72 @@
-# world 世界操作
+# world - 世界操作
 
-`world` 对象提供对副本实例世界的控制能力。
+`world` 对象用于控制副本世界的环境效果，包括时间、天气、音效和粒子。
 
-## 方法一览
+## 通用约定
 
-| 方法 | 说明 |
-|------|------|
-| `world.setTime(ticks)` | 设置世界时间 |
-| `world.getTime()` | 获取当前世界时间 |
-| `world.setWeather(type)` | 设置天气：`CLEAR`、`RAIN`、`THUNDER` |
-| `world.setBlock(x, y, z, material)` | 设置方块 |
-| `world.getBlock(x, y, z)` | 获取方块类型名 |
-| `world.fillBlocks(x1, y1, z1, x2, y2, z2, material)` | 批量填充方块 |
-| `world.playEffect(x, y, z, effect, data)` | 播放粒子效果 |
-| `world.playSound(x, y, z, sound, volume, pitch)` | 在坐标播放音效 |
-| `world.explosion(x, y, z, power, fire, breakBlocks)` | 创建爆炸 |
-| `world.lightning(x, y, z, damage)` | 召唤闪电 |
-| `world.getWorldName()` | 获取副本世界名称 |
+- 位置参数格式: `"x,y,z"` | 颜色代码: `&` 前缀 | 时间: tick（20tick=1秒）| 材质: 大写英文
+
+## 方法列表
+
+| 方法 | 返回值 | 说明 |
+|------|--------|------|
+| `setTime(time)` | void | 设置世界时间 |
+| `setWeather(type)` | void | 设置天气：`clear` / `rain` / `thunder` |
+| `playSound(loc, sound, volume, pitch)` | void | 在指定位置播放音效 |
+| `spawnParticle(loc, name, count)` | void | 在指定位置生成粒子 |
+| `spawnDust(loc, r, g, b, size, count)` | void | 生成彩色粉尘粒子 |
+| `spawnDustTransition(loc, r1, g1, b1, r2, g2, b2, size, count)` | void | 生成渐变色粉尘粒子 |
+| `drawPathToAll(target, r, g, b, density, maxDist)` | void | 为所有玩家绘制粒子引导线 |
+| `drawPath(player, target, r, g, b, density, maxDist)` | void | 为指定玩家绘制粒子引导线 |
 
 ## 使用示例
 
-```javascript
-// on_init.js - 副本初始化设置环境
-world.setTime(18000); // 设为夜晚
-world.setWeather("THUNDER"); // 雷暴天气
-```
+### 设置副本氛围
 
 ```javascript
-// on_complete.js - 通关时打开出口
-world.fillBlocks(100, 64, 200, 102, 66, 200, "AIR"); // 移除墙壁
-world.playEffect(101, 65, 200, "END_GATEWAY_SPAWN", 0);
-world.playSound(101, 65, 200, "ENTITY_ENDER_DRAGON_DEATH", 1.0, 1.0);
+function on_init() {
+    world.setTime(18000); // 午夜
+    world.setWeather("thunder");
+}
 ```
 
+### Boss 出场特效
+
 ```javascript
-// 动态关门效果
-world.fillBlocks(95, 64, 195, 97, 67, 195, "IRON_BARS");
-dungeon.broadcastSound("BLOCK_IRON_DOOR_CLOSE", 1.0, 0.8);
-dungeon.broadcast("&c大门关闭了！无路可退！");
+function on_area_enter() {
+    var area = dungeon.getData("_area_name");
+    if (area == "boss_room") {
+        world.playSound("100,65,100", "entity.ender_dragon.growl", 1.0, 0.8);
+        world.spawnParticle("100,65,100", "EXPLOSION_LARGE", 20);
+        world.spawnDust("100,66,100", 255, 0, 0, 2.0, 50);
+    }
+}
+```
+
+### 引导线指引玩家
+
+```javascript
+function on_start() {
+    // 每2秒为所有玩家绘制到目标点的引导线
+    tasks.startRepeating("guide", 40, function() {
+        world.drawPathToAll("200,65,200", 0, 255, 0, 0.5, 30);
+    });
+}
+
+function on_group_clear() {
+    // Boss 死后指引到出口
+    tasks.stop("guide");
+    tasks.startRepeating("guide_exit", 40, function() {
+        world.drawPathToAll("250,65,250", 255, 215, 0, 0.5, 30);
+    });
+}
 ```
 
 ## 注意事项
 
-- 所有坐标均为副本实例世界内的绝对坐标
-- 方块操作是同步的，大量操作建议分帧执行（使用 `tasks.startRepeating`）
-- 副本世界在结束后会被完整删除，不需要担心方块修改的持久化问题
+- `setTime` 参数为 Minecraft 时间：0=日出，6000=正午，12000=日落，18000=午夜
+- `sound` 参数使用 Minecraft 音效 ID，如 `"entity.wither.spawn"`
+- `spawnParticle` 的 `name` 使用 Bukkit Particle 枚举名
+- `spawnDust` RGB 范围为 0-255，`size` 为粒子大小
+- `drawPath` 和 `drawPathToAll` 会从玩家位置到目标点绘制粒子路径
+- `density` 控制粒子密度，`maxDist` 控制最大显示距离
