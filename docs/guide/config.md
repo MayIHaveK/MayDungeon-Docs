@@ -110,6 +110,35 @@ conditions:
     - "mythic:强化石:3"
 ```
 
+## 复活币配置
+
+详细说明请参考 [复活币系统](./revive-coin.md)。
+
+```yaml
+revive-coin:
+  enabled: true
+  gui-delay: 20
+  gui-title: "&8复活确认"
+  save-interval: 60
+```
+
+## 世界副本配置
+
+详细说明请参考 [世界副本](./world-boss.md)。
+
+```yaml
+# dungeon.yml
+type: WORLD_BOSS
+world-boss:
+  schedule:
+    - "19:00-20:00"
+  duration: 3600
+  max-players: 100
+  broadcast-before: [300, 60, 10]
+  allow-late-join: true
+  ranking-mode: BOTH
+```
+
 ## 消息配置
 
-消息文件位于 `plugins/MayDungeon/messages/zh_CN.yml`，支持自定义所有插件提示文本。支持 `&` 颜色代码和 PlaceholderAPI 变量。
+消息文件位于 `plugins/MayDungeon/messages.yml`，支持自定义所有插件提示文本。支持 `&` 颜色代码和 PlaceholderAPI 变量。
