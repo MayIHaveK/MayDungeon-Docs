@@ -63,6 +63,53 @@ integrations:
 | `allow-rejoin` | boolean | 是否允许重连 |
 | `keep-inventory` | boolean | 死亡是否保留背包 |
 
+## 体力系统配置
+
+体力系统用于限制玩家频繁刷副本。详细说明请参考 [体力系统](./stamina.md)。
+
+```yaml
+stamina:
+  enabled: true
+  max: 100
+  recovery-mode: DAILY_RESET  # DAILY_RESET / INTERVAL
+  daily-reset-hour: 5
+  recovery-interval: 300
+  recovery-amount: 1
+  admin-bypass: true
+  bypass-permission: "maydungeon.stamina.bypass"
+  save-interval: 60  # 内存缓存刷盘间隔（秒）
+
+daily-limit:
+  save-interval: 120  # 每日次数数据刷盘间隔（秒）
+```
+
+每个副本可单独配置消耗体力值：
+
+```yaml
+# dungeon.yml
+conditions:
+  stamina-cost: 10
+```
+
+## 进入条件配置
+
+详细说明请参考 [进入条件系统](./conditions.md)。
+
+```yaml
+# dungeon.yml
+conditions:
+  min-level: 10
+  permission: "maydungeon.vip"
+  stamina-cost: 10
+  daily-limit: 3
+  daily-limit-reset-hour: -1
+  cooldown: 3600
+  money-cost: 1000
+  item-cost:
+    - "DIAMOND:5"
+    - "mythic:强化石:3"
+```
+
 ## 消息配置
 
 消息文件位于 `plugins/MayDungeon/messages/zh_CN.yml`，支持自定义所有插件提示文本。支持 `&` 颜色代码和 PlaceholderAPI 变量。
