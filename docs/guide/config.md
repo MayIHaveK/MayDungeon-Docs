@@ -73,7 +73,8 @@ stamina:
   max: 100
   recovery-mode: DAILY_RESET  # DAILY_RESET / INTERVAL
   daily-reset-hour: 5
-  recovery-interval: 300
+  recovery-interval-minutes: 5  # INTERVAL 模式：恢复间隔（分钟，优先于 recovery-interval）
+  recovery-interval: 300        # 旧配置兼容：恢复间隔（秒）
   recovery-amount: 1
   admin-bypass: true
   bypass-permission: "maydungeon.stamina.bypass"
@@ -108,6 +109,7 @@ conditions:
   item-cost:
     - "DIAMOND:5"
     - "mythic:强化石:3"
+    - "overture:example_item:1"
 ```
 
 ## 复活币配置

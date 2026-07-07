@@ -18,8 +18,8 @@ features:
     title: 纯 JS 脚本驱动
     details: 副本的通关条件、奖励逻辑、流程控制全部由 JavaScript 脚本决定，插件不预设任何规则
   - icon: ⚔️
-    title: MythicMobs 集成
-    details: 直接调用 MythicMobs API 生成自定义怪物，支持 Boss 技能、阶段战等复杂机制
+    title: MythicMobs / Overture 集成
+    details: 直接调用 MythicMobs API 生成自定义怪物，并支持 Overture 物品库作为入场消耗
   - icon: 🌍
     title: 独立世界实例
     details: 每次副本创建独立世界副本，玩家间互不干扰，结束后自动清理

@@ -33,6 +33,8 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 | `revive_remaining` | 剩余复活次数（-1=无限） |
 | `revive_coins` | 复活币余额 |
 | `stamina` | 当前体力值 |
+| `stamina_current` | 当前体力值 |
+| `stamina_remaining` | 当前剩余体力值 |
 | `stamina_max` | 最大体力值 |
 | `stamina_percent` | 体力百分比（0-100） |
 
@@ -63,13 +65,17 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 | `team_0_player_revive_remaining` | 队长剩余复活次数 |
 | `team_1_player_uuid` | 第2个成员的 UUID |
 
-支持的属性：`name`、`health`、`max_health`、`health_percent`、`kills`、`deaths`、`alive`、`online`、`revive_remaining`、`uuid`
+支持的属性：`name`、`health`、`max_health`、`health_percent`、`kills`、`deaths`、`alive`、`online`、`revive_remaining`、`uuid`。
+
+其中 `name`、`uuid`、`online`、`health`、`max_health`、`health_percent` 在副本外也可读取；`kills`、`deaths`、`alive`、`revive_remaining` 依赖副本实例，副本外返回安全默认值。
 
 ### 每日挑战次数
 
 | 占位符 | 说明 |
 |--------|------|
-| `daily_<地牢ID>` | 今日已挑战次数 |
+| `daily_<地牢ID>` | 今日已挑战次数（兼容旧变量） |
+| `daily_used_<地牢ID>` | 今日已挑战次数 |
+| `daily_max_<地牢ID>` | 今日最大挑战次数（-1=无限制） |
 | `daily_left_<地牢ID>` | 今日剩余次数（-1=无限制） |
 
 ### 动态数据
@@ -91,7 +97,7 @@ lines:
   - "&c击杀: %md_kills%"
   - "&e怪物: %md_monsters_remaining%"
   - "&b时间: %md_elapsed_time_formatted%"
-  - "&d体力: %md_stamina%/%md_stamina_max%"
+  - "&d体力: %md_stamina_current%/%md_stamina_max%"
 ```
 
 ### 队伍成员血量显示
@@ -108,7 +114,7 @@ lines:
 
 ```yaml
 lines:
-  - "&6金币本: %md_daily_left_gold_dungeon%次剩余"
+  - "&6金币本: %md_daily_used_gold_dungeon%/%md_daily_max_gold_dungeon%"
   - "&d强化本: %md_daily_left_enhance_dungeon%次剩余"
 ```
 
@@ -117,5 +123,5 @@ lines:
 - 前缀 `%maydungeon_xxx%` 和 `%md_xxx%` 完全等效，推荐使用短前缀
 - 玩家不在副本中时，副本相关占位符返回空字符串或 "0"
 - `team_<N>_player_<属性>` 中序号超出范围返回空字符串
-- `daily_left_` 注意比 `daily_` 多一级，两者含义不同
+- `daily_left_`、`daily_used_`、`daily_max_` 注意比 `daily_` 多一级，含义不同
 - 所有占位符异步安全（内存缓存读取，零 IO）

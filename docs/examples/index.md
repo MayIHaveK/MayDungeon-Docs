@@ -8,7 +8,10 @@
 一个最基础的副本示例，包含怪物生成、击杀计数和通关逻辑。适合初学者了解基本结构。
 
 ### [Boss 战](/examples/boss-fight)
-包含 Boss 战机制的副本，演示多阶段 Boss、技能释放和团队配合。
+包含 Boss 战机制的普通副本，演示多阶段 Boss、技能释放和团队配合。
+
+### [世界 Boss 示例](/examples/world-boss)
+定时开放的全服 Boss 活动示例，演示 `WORLD_BOSS` 配置、共享实例、伤害排行和排行奖励。
 
 ### [解谜副本](/examples/puzzle)
 以机关解谜为核心的副本，演示区域检测、障碍物控制和交互触发器。
@@ -20,8 +23,8 @@
 
 1. 将示例文件复制到 `plugins/MayDungeon/dungeons/` 下
 2. 准备对应的模板世界
-3. 执行 `/md reload`
-4. 使用 `/md join <ID>` 进入测试
+3. 执行 `/md admin reload`
+4. 普通副本使用 `/md start <ID>` 创建并进入；世界 Boss 先由调度器或 `/md admin worldboss start <ID>` 开放，再用 `/md start <ID>` 加入
 
 ## 示例项目结构
 

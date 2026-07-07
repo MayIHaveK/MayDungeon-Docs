@@ -23,7 +23,8 @@ MayDungeon 为每个副本脚本注入以下全局对象，你可以在任何事
 | `utils` | 通用工具方法 | `utils.delay(20, fn)` |
 | `holograms` | 全息文字（需DecentHolograms） | `holograms.create(...)` |
 | `npc` | NPC系统（需Adyeshach） | `npc.create(...)` |
-| `trigger` | 事件触发者信息 | `trigger.getPlayerName()` |
+| `trigger` | 事件触发者信息；无触发玩家时为 null | `trigger.getPlayerName()` |
+| `event` | 部分事件注入的 Java Map 上下文，常见于 `on_damage.js` | `event.get("damage")` |
 | `print()` | 控制台日志输出 | `print("hello")` |
 
 ## 事件脚本
@@ -39,11 +40,13 @@ MayDungeon 为每个副本脚本注入以下全局对象，你可以在任何事
 | `on_player_quit.js` | 玩家退出副本 | 退出的玩家 |
 | `on_player_death.js` | 玩家死亡 | 死亡的玩家 |
 | `on_monster_kill.js` | 怪物被击杀 | 击杀者（可能null） |
+| `on_damage.js` | 玩家对副本实体造成有效伤害 | 造成伤害的玩家，额外注入 `event` Map |
 | `on_group_clear.js` | 怪物组全灭 | null |
 | `on_area_enter.js` | 玩家进入区域 | 进入的玩家 |
 | `on_area_leave.js` | 玩家离开区域 | 离开的玩家 |
 | `on_interact.js` | 右键方块 | 交互的玩家 |
 | `on_entity_interact.js` | 右键实体/NPC | 交互的玩家 |
+| `on_boss_reward.js` | 世界 Boss 成功结束后的专属排行奖励，先于 `on_reward.js` | null |
 | `on_reward.js` | 通关（仅成功时） | null |
 | `on_complete.js` | 副本成功 | null |
 | `on_fail.js` | 副本失败 | null |

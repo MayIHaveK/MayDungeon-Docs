@@ -12,7 +12,8 @@
 |------|--------|------|
 | `teleportAll(loc)` | void | 传送所有玩家到指定位置 |
 | `teleport(name, loc)` | void | 传送指定玩家到指定位置 |
-| `giveItem(material, amount)` | void | 给所有玩家物品 |
+| `giveItem(material, amount)` | void | 给副本内所有在线玩家物品，背包满时掉落在玩家脚下 |
+| `giveItemTo(playerNameOrUuid, material, amount)` | void | 给指定在线玩家物品；仅当该玩家仍在当前副本内才会发放 |
 | `removeItemsByLore(text)` | void | 移除所有玩家背包中含指定 Lore 文本的物品 |
 | `setGameMode(mode)` | void | 设置所有玩家游戏模式 |
 | `setAliveGameMode(mode)` | void | 仅设置存活玩家的游戏模式 |
@@ -51,15 +52,30 @@ function on_player_death() {
 
 ```javascript
 function on_complete() {
+    // 推荐：普通物品奖励直接用 API，不依赖控制台命令权限。
     players.giveItem("DIAMOND", 5);
+
+    // 如确实需要命令奖励，需在 config.yml 中开启 script.allow-console-command。
     players.runCommand("effect give %player% minecraft:regeneration 10 2");
     players.sendMessage("&a通关奖励已发放！");
 }
 ```
 
+### 按排名给指定玩家发奖
+
+`giveItemTo` 可接收玩家名、UUID 字符串，或 Bukkit `Player` 对象。它会检查玩家是否在线且仍在当前副本内，适合世界 Boss 或伤害排行奖励。
+
+```javascript
+// on_boss_reward.js / on_reward.js
+var uuid = "00000000-0000-0000-0000-000000000000";
+players.giveItemTo(uuid, "DIAMOND", 10);
+```
+
 ## 注意事项
 
 - `runCommand(cmd)` 中使用 `%player%` 占位符，会被替换为每位玩家的名字
+- `runCommand(cmd)` 默认受 `script.allow-console-command` 限制；默认配置为 `false`，推荐优先用 `giveItem` / `giveItemTo` 等安全 API
+- `giveItem` / `giveItemTo` 的 `amount` 会被限制在 1~64，背包满时剩余物品会掉落在玩家脚下
 - `setGameMode` 参数为字符串：`"SURVIVAL"`、`"ADVENTURE"`、`"CREATIVE"`、`"SPECTATOR"`
 - `teleportAll` 和 `teleport` 的位置参数格式为 `"x,y,z"`
 - 死亡玩家默认进入旁观模式，使用 `reviveAll()` 可复活全员

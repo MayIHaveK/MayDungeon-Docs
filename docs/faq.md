@@ -14,6 +14,18 @@
 
 检查 MythicMobs 配置是否正确放入并 reload。执行 `/mm mobs` 确认怪物已注册。
 
+### Overture 物品消耗一直提示不足
+
+确认服务器已安装并启用 Overture，且 `item-cost` 中的 ID 与 Overture 物品 ID 完全一致，例如：
+
+```yaml
+conditions:
+  item-cost:
+    - "overture:example_item:1"
+```
+
+如果 Overture 未启用，`overture:` 类型会被视为不足，但不会影响插件启动。
+
 ## 使用相关
 
 ### 副本卡住不结束

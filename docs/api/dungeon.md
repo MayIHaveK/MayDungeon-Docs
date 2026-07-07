@@ -19,6 +19,13 @@
 | `setData(key, value)` | void | 设置运行时数据 |
 | `getInt(key, default)` | int | 读取整型数据，不存在返回 default |
 | `addInt(key, amount)` | int | 整型数据增量，返回新值 |
+| `getMap(key)` | Map | 获取/创建当前实例生命周期内的临时 Map |
+| `newMap()` | Map | 创建新的临时 Map，适合做嵌套记录 |
+| `getMapValue(mapKey, entryKey)` | Object | 读取临时 Map 中指定条目 |
+| `setMapValue(mapKey, entryKey, value)` | void | 写入临时 Map 条目 |
+| `removeMapValue(mapKey, entryKey)` | void | 删除临时 Map 条目 |
+| `clearMap(mapKey)` | void | 清空临时 Map |
+| `addMapNumber(mapKey, entryKey, amount)` | double | 对临时 Map 内的数值条目累加，返回新值 |
 | `getKillCount(mobName)` | int | 指定怪物击杀数 |
 | `getTotalKills()` | int | 总击杀数 |
 | `getQuitCount(playerName)` | int | 指定玩家退出次数 |
@@ -63,6 +70,38 @@ function on_monster_kill() {
 }
 ```
 
+### 用临时 Map 记录伤害 / 排行数据
+
+`getMap` 返回的是当前副本实例内的临时 Map：脚本之间可共享，副本结束后自动释放。默认普通副本和世界 Boss 示例都使用 `damage_records` 记录每个玩家的伤害。
+
+```javascript
+// on_damage.js
+var damage = event.get("damage");
+var elapsed = dungeon.getElapsedTime();
+var records = dungeon.getMap("damage_records");
+var player = trigger.getPlayer();
+var uuid = player.getUniqueId().toString();
+var record = records.get(uuid);
+
+if (record == null) {
+    record = dungeon.newMap();
+    record.put("uuid", uuid);
+    record.put("name", trigger.getPlayerName());
+    record.put("damage", 0.0);
+    record.put("first_hit", elapsed);
+    records.put(uuid, record);
+}
+
+record.put("damage", Number(record.get("damage")) + damage);
+record.put("last_hit", elapsed);
+```
+
+如果只需要简单计数，也可以用 `addMapNumber`：
+
+```javascript
+dungeon.addMapNumber("kill_by_player", trigger.getPlayerName(), 1);
+```
+
 ### 延迟结束副本
 
 ```javascript
@@ -77,6 +116,8 @@ function on_group_clear() {
 ## 注意事项
 
 - `end()` 调用后副本立即进入结束流程，后续代码仍会执行但操作可能无效
-- `setData` 存储的数据仅在本次副本运行期间有效，副本结束后清除
+- `setData` 和 `getMap` 存储的数据仅在本次副本运行期间有效，副本结束后清除
+- `getMap(key)` 会在 key 不存在时自动创建空 Map；适合 `damage_records`、阶段状态、临时排行等运行时数据
+- `newMap()` 只创建一个新的 Map，不会自动保存；通常需要再 `records.put(uuid, record)` 放入父 Map
 - `getPreset(path)` 使用点分路径，如 `"boss.health"` 对应 presets.yml 中的嵌套结构
 - `broadcastTitle` 的 in/stay/out 参数单位为 tick

@@ -15,6 +15,7 @@ MayDungeon 使用事件驱动模型，副本在关键节点自动执行对应的
 | `on_player_quit.js` | 玩家退出副本 | 退出的玩家 |
 | `on_player_death.js` | 玩家死亡 | 死亡的玩家 |
 | `on_monster_kill.js` | 怪物被击杀 | 击杀者（可能 null） |
+| `on_damage.js` | 玩家对副本实体造成有效伤害 | 造成伤害的玩家 |
 | `on_group_clear.js` | 怪物组全部清除 | null |
 | `on_area_enter.js` | 玩家进入已定义区域 | 进入的玩家 |
 | `on_area_leave.js` | 玩家离开已定义区域 | 离开的玩家 |
@@ -39,13 +40,18 @@ dungeon.broadcast("&c" + playerName + " 阵亡了！");
 
 ## 事件上下文数据
 
-部分事件会通过 `dungeon.getData()` 提供额外上下文：
+部分事件会通过 `dungeon.getData()` 或 JS 变量 `event` 提供额外上下文：
 
 | 事件 | 数据 key | 说明 |
 |------|----------|------|
 | `on_area_enter` / `on_area_leave` | `_area_name` | 触发区域名称 |
 | `on_group_clear` | `_group_name` | 被清除的怪物组名 |
 | `on_monster_kill` | `_monster_type` | 被击杀怪物类型 |
+| `on_damage` | `event.get("damage")` | 本次实际计入的有效伤害；会按目标剩余生命截断，避免溢出伤害虚高 |
+| `on_damage` | `event.get("finalDamage")` / `event.get("rawDamage")` | Bukkit 最终伤害 / 原始伤害，通常统计排行用 `damage` 即可 |
+| `on_damage` | `event.get("target")` / `event.get("targetUuid")` / `event.get("targetType")` / `event.get("targetName")` | 被攻击实体上下文 |
+| `on_damage` | `event.get("isWorldBoss")` / `event.get("cause")` / `event.get("instanceId")` | 是否世界 Boss、伤害原因、实例 ID |
+| `on_damage` | `event.get("cause") == "KILLING_BLOW"` | 怪物死亡时的最后一击补记，用于避免致死一刀漏统计 |
 | `on_entity_interact` | `_interact_npc_id` | 被交互的 NPC ID |
 
 ## 执行顺序
@@ -96,6 +102,31 @@ dungeon.broadcast("&c" + name + " 倒下了！存活: " + players.getAliveCount(
 if (players.areAllDead()) {
     dungeon.end(false);
 }
+```
+
+```javascript
+// on_damage.js
+var damage = event.get("damage");
+if (damage <= 0) return;
+
+var elapsed = dungeon.getElapsedTime();
+var records = dungeon.getMap("damage_records");
+var player = trigger.getPlayer();
+var uuid = player.getUniqueId().toString();
+var record = records.get(uuid);
+
+if (record == null) {
+    record = dungeon.newMap();
+    record.put("uuid", uuid);
+    record.put("name", trigger.getPlayerName());
+    record.put("damage", 0.0);
+    record.put("first_hit", elapsed);
+    records.put(uuid, record);
+}
+
+record.put("name", trigger.getPlayerName());
+record.put("damage", Number(record.get("damage")) + damage);
+record.put("last_hit", elapsed);
 ```
 
 ## 注意事项

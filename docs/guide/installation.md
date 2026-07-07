@@ -13,6 +13,7 @@
 - DecentHolograms — 全息文字显示
 - Adyeshach — 虚拟 NPC 系统
 - Vault — 经济系统
+- Overture — 物品库，可用于 `overture:<物品ID>:<数量>` 入场消耗
 
 ## 安装步骤
 

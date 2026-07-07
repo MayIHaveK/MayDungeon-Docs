@@ -31,7 +31,8 @@ export default defineConfig({
             { text: '事件系统', link: '/guide/events' },
             { text: '预设模板', link: '/guide/presets' },
             { text: '怪物系统', link: '/guide/monsters' },
-            { text: '组队系统', link: '/guide/teams' }
+            { text: '组队系统', link: '/guide/teams' },
+            { text: '世界 Boss', link: '/guide/world-boss' }
           ]
         },
         {
@@ -77,6 +78,7 @@ export default defineConfig({
             { text: '示例索引', link: '/examples/' },
             { text: '简单副本', link: '/examples/simple' },
             { text: '多阶段Boss战', link: '/examples/boss-fight' },
+            { text: '世界 Boss 示例', link: '/examples/world-boss' },
             { text: '解谜副本', link: '/examples/puzzle' },
             { text: '生存挑战', link: '/examples/survival' }
           ]

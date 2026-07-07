@@ -27,6 +27,7 @@ conditions:
     - "DIAMOND:5"
     - "mythic:强化石:3"
     - "mythic:深渊入场券:1"
+    - "overture:example_item:1"
   # 需要持有的物品（不消耗）
   required-items:
     - "DIAMOND_SWORD"
@@ -87,7 +88,9 @@ conditions:
 
 | 占位符 | 说明 |
 |--------|------|
-| `%md_daily_<地牢ID>%` | 今日已挑战次数 |
+| `%md_daily_<地牢ID>%` | 今日已挑战次数（兼容旧变量） |
+| `%md_daily_used_<地牢ID>%` | 今日已挑战次数 |
+| `%md_daily_max_<地牢ID>%` | 今日最大挑战次数（-1=无限制） |
 | `%md_daily_left_<地牢ID>%` | 今日剩余次数（-1=无限制） |
 
 ## 金币消耗
@@ -105,7 +108,7 @@ conditions:
 
 ## 物品消耗
 
-进入副本时消耗指定物品。支持原版物品和 MythicMobs 物品。
+进入副本时消耗指定物品。支持原版物品、MythicMobs 物品和 Overture 物品库物品。
 
 ```yaml
 conditions:
@@ -114,6 +117,7 @@ conditions:
     - "GOLD_INGOT:10"      # 原版金锭 x10
     - "mythic:强化石:3"    # MythicMobs 物品
     - "mythic:入场券:1"    # MythicMobs 物品
+    - "overture:门票:1"    # Overture 物品
 ```
 
 ### 格式说明
@@ -122,10 +126,14 @@ conditions:
 |------|------|------|
 | `MATERIAL:数量` | 原版物品 | `DIAMOND:5` |
 | `mythic:物品ID:数量` | MythicMobs 物品 | `mythic:强化石:3` |
+| `overture:物品ID:数量` | Overture 物品库物品 | `overture:门票:1` |
 
 - MythicMobs 物品通过 `isSimilar()` 进行匹配（名称、lore、NBT 完全一致）
+- Overture 物品通过 Overture API 判断物品 ID
 - 队伍中每个成员都需要持有并会被扣除
 - 未安装 MythicMobs 时，`mythic:` 前缀的物品检查会失败
+- 未安装或未启用 Overture 时，`overture:` 前缀的物品检查会失败
+- 数量必须大于 0，否则该条配置会被视为无效配置
 
 ## 数据存储
 
@@ -195,6 +203,7 @@ conditions:
   item-cost:
     - "mythic:深渊入场券:1"
     - "mythic:暗能量碎片:5"
+    - "overture:深渊钥匙:1"
   money-cost: 2000
 ```
 
@@ -266,6 +275,11 @@ conditions:
 # 设置 item-cost: ["mythic:强化石:1"]
 /mm items give <玩家> 强化石 1
 /md start <地牢>   # 应该成功
+
+# Overture 物品测试
+# 设置 item-cost: ["overture:门票:1"]
+# 使用 Overture 的给物品命令或菜单给予玩家对应物品
+/md start <地牢>   # 应该成功并扣除 Overture 物品
 ```
 
 ### 组合条件测试

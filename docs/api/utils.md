@@ -1,6 +1,6 @@
 # utils - 工具方法
 
-`utils` 对象提供通用的工具函数，包括延时、随机数、命令执行等。
+`utils` 对象提供通用的工具函数，包括延时、随机数、命令执行等。命令执行默认受安全配置限制；普通物品奖励推荐优先使用 `players.giveItem` / `players.giveItemTo`。
 
 ## 通用约定
 
@@ -69,4 +69,5 @@ function on_start() {
 - `random(min, max)` 包含两端（闭区间），`randomDouble` 不包含 max（左闭右开）
 - `broadcast` 是全服广播，与 `dungeon.broadcast` 不同（后者仅副本内）
 - `runCommand` 以控制台权限执行，`runCommandAsPlayer` 以玩家权限执行
+- 命令执行受 `config.yml` 中 `script.allow-console-command` 限制，默认通常为 `false`；奖励脚本发物品建议用 `players.giveItem` / `players.giveItemTo`
 - `log` 输出到服务器控制台，用于调试

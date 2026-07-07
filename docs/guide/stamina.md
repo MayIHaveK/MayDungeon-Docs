@@ -12,6 +12,7 @@ stamina:
   max: 100
   recovery-mode: DAILY_RESET
   daily-reset-hour: 5
+  recovery-interval-minutes: 5
   recovery-interval: 300
   recovery-amount: 1
   admin-bypass: true
@@ -26,7 +27,8 @@ stamina:
 | `max` | int | 100 | 最大体力值 |
 | `recovery-mode` | String | DAILY_RESET | 恢复模式 |
 | `daily-reset-hour` | int | 5 | 每日重置时间（24小时制） |
-| `recovery-interval` | int | 300 | INTERVAL 模式：恢复间隔（秒） |
+| `recovery-interval-minutes` | int | 5 | INTERVAL 模式：恢复间隔（分钟，优先使用） |
+| `recovery-interval` | int | 300 | INTERVAL 模式：恢复间隔（秒，旧配置兼容） |
 | `recovery-amount` | int | 1 | INTERVAL 模式：每次恢复量 |
 | `admin-bypass` | boolean | true | 管理员是否绕过体力限制 |
 | `bypass-permission` | String | maydungeon.stamina.bypass | 绕过权限节点 |
@@ -42,12 +44,12 @@ stamina:
 
 ### INTERVAL（定时恢复）
 
-每隔一段时间（`recovery-interval` 秒）恢复一定量（`recovery-amount`）的体力。体力上限不超过 `max`。
+每隔一段时间恢复一定量（`recovery-amount`）的体力。优先使用 `recovery-interval-minutes`（分钟），没有该配置时兼容旧的 `recovery-interval`（秒）。体力上限不超过 `max`。
 
 - 优点：更平滑的恢复曲线，玩家体验更好
 - 适用场景：需要精细控制刷副本频率的服务器
 
-示例：`recovery-interval: 300`，`recovery-amount: 1` 表示每 5 分钟恢复 1 点体力。
+示例：`recovery-interval-minutes: 5`，`recovery-amount: 1` 表示每 5 分钟恢复 1 点体力。旧配置 `recovery-interval: 300` 仍可继续使用。
 
 ## 副本体力消耗
 
@@ -77,6 +79,8 @@ conditions:
 | 占位符 | 说明 |
 |--------|------|
 | `%md_stamina%` | 当前体力值 |
+| `%md_stamina_current%` | 当前体力值 |
+| `%md_stamina_remaining%` | 当前剩余体力值 |
 | `%md_stamina_max%` | 最大体力值 |
 | `%md_stamina_percent%` | 体力百分比（0-100） |
 | `%maydungeon_stamina%` | 同上（完整前缀） |
@@ -135,7 +139,7 @@ stamina:
   enabled: true
   max: 200
   recovery-mode: INTERVAL
-  recovery-interval: 600   # 10分钟恢复1点
+  recovery-interval-minutes: 10   # 10分钟恢复1点
   recovery-amount: 1
 ```
 
@@ -170,15 +174,15 @@ conditions:
 # 临时改配置为快速恢复以观察效果
 stamina:
   recovery-mode: INTERVAL
-  recovery-interval: 10    # 10秒恢复一次
-  recovery-amount: 5       # 每次恢复5点
+  recovery-interval-minutes: 1    # 1分钟恢复一次
+  recovery-amount: 5              # 每次恢复5点
 ```
 
 ```
 /md admin stamina <你的名字> set 50
-# 等待 10 秒
+# 等待 1 分钟
 /md stamina    # 应该显示 55
-# 等待 10 秒
+# 再等待 1 分钟
 /md stamina    # 应该显示 60
 ```
 
