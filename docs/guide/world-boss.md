@@ -72,9 +72,23 @@ spawn-point: "8.5, 8.0, 8.5"
 
 指定星期的跨午夜窗口会延续到次日凌晨，例如 `SAT 23:00-01:00` 表示周六 23:00 到周日 01:00 属于同一个开放窗口。
 
+## 调度器全局配置
+
+调度器扫描频率可在 `config.yml` 中调整：
+
+```yaml
+dungeon:
+  world-boss:
+    scheduler:
+      # 插件启动后延迟多少秒进行第一次开放时间扫描（建议 3-10 秒，等待副本配置和软依赖加载完成）
+      initial-delay-seconds: 5
+      # 开放时间扫描间隔（秒）；间隔越短，到点响应越快，建议 10-60
+      check-interval-seconds: 60
+```
+
 ## 生命周期
 
-1. 调度器每 60 秒检查一次所有 `WORLD_BOSS` 副本。
+1. 调度器定时检查所有 `WORLD_BOSS` 副本（默认启动 5 秒后首次扫描，之后每 60 秒一次，见上方全局配置）。
 2. 进入开放窗口后自动创建世界 Boss 实例并广播。
 3. 玩家使用 `/md start world_boss` 加入当前实例。
 4. 玩家退出后，如果实例内无人，世界 Boss 仍保持开放。
@@ -96,6 +110,8 @@ spawn-point: "8.5, 8.0, 8.5"
 
 ::: info 伤害追踪
 插件会在玩家造成有效伤害时触发 `scripts/on_damage.js`，并注入 `event` 上下文。默认示例使用 `dungeon.getMap("damage_records")` 自己记录伤害、首次出手时间和最近出手时间，结算时再由 JS 排序、计算 DPS 与发奖。
+
+如果不需要自定义 DPS/时间统计，也可以直接使用内置的 [`ranking` 伤害排行 API](/api/ranking)：在 `on_damage.js` 中调用 `ranking.addDamage(trigger.getPlayer(), event.get("damage"))`，结算时用 `ranking.getTop(10)` / `ranking.getTeamTop(5)` 获取带排名和百分比的排行数据。
 :::
 
 ## 生成 Boss 示例

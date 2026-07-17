@@ -23,6 +23,7 @@ MayDungeon 为每个副本脚本注入以下全局对象，你可以在任何事
 | `utils` | 通用工具方法 | `utils.delay(20, fn)` |
 | `holograms` | 全息文字（需DecentHolograms） | `holograms.create(...)` |
 | `npc` | NPC系统（需Adyeshach） | `npc.create(...)` |
+| `ranking` | 伤害排行（世界Boss/DPS统计） | `ranking.getTop(10)` |
 | `trigger` | 事件触发者信息；无触发玩家时为 null | `trigger.getPlayerName()` |
 | `event` | 部分事件注入的 Java Map 上下文，常见于 `on_damage.js` | `event.get("damage")` |
 | `print()` | 控制台日志输出 | `print("hello")` |
@@ -70,3 +71,4 @@ MayDungeon 为每个副本脚本注入以下全局对象，你可以在任何事
 - [utils 工具方法](utils.md)
 - [holograms 全息文字](holograms.md)
 - [npc NPC系统](npc.md)
+- [ranking 伤害排行](ranking.md)

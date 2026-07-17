@@ -17,6 +17,7 @@ stamina:
   recovery-amount: 1
   admin-bypass: true
   bypass-permission: "maydungeon.stamina.bypass"
+  save-interval: 60
 ```
 
 ## 配置说明
@@ -32,6 +33,7 @@ stamina:
 | `recovery-amount` | int | 1 | INTERVAL 模式：每次恢复量 |
 | `admin-bypass` | boolean | true | 管理员是否绕过体力限制 |
 | `bypass-permission` | String | maydungeon.stamina.bypass | 绕过权限节点 |
+| `save-interval` | int | 60 | 内存缓存刷盘间隔（秒） |
 
 ## 恢复模式
 

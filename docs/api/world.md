@@ -62,11 +62,29 @@ function on_group_clear() {
 }
 ```
 
+## 跨版本粒子兼容
+
+1.20.5 起 Bukkit 部分粒子枚举改名（如 `REDSTONE` → `DUST`、`EXPLOSION_LARGE` → `EXPLOSION`）。`spawnParticle` 会自动按名称做新旧互查，**新旧枚举名都可以直接使用**，同一份脚本在 1.20.x 和 1.21.x 服务端上无需修改：
+
+| 新名称（1.20.5+） | 旧名称（1.20.4 及以下） |
+|------|------|
+| `DUST` | `REDSTONE` |
+| `SMOKE` / `LARGE_SMOKE` | `SMOKE_NORMAL` / `SMOKE_LARGE` |
+| `EXPLOSION` / `EXPLOSION_EMITTER` / `POOF` | `EXPLOSION_LARGE` / `EXPLOSION_HUGE` / `EXPLOSION_NORMAL` |
+| `WITCH` / `ENTITY_EFFECT` | `SPELL_WITCH` / `SPELL_MOB` |
+| `HAPPY_VILLAGER` / `ANGRY_VILLAGER` | `VILLAGER_HAPPY` / `VILLAGER_ANGRY` |
+| `ENCHANT` / `FIREWORK` / `TOTEM_OF_UNDYING` | `ENCHANTMENT_TABLE` / `FIREWORKS_SPARK` / `TOTEM` |
+| `SPLASH` / `BUBBLE` / `RAIN` | `WATER_SPLASH` / `WATER_BUBBLE` / `WATER_DROP` |
+| `ITEM` / `BLOCK` | `ITEM_CRACK` / `BLOCK_CRACK` |
+
+`spawnDust`、`drawPath` 系列方法内部也做了同样的兼容处理，无需关心服务端版本。
+
 ## 注意事项
 
 - `setTime` 参数为 Minecraft 时间：0=日出，6000=正午，12000=日落，18000=午夜
 - `sound` 参数使用 Minecraft 音效 ID，如 `"entity.wither.spawn"`
-- `spawnParticle` 的 `name` 使用 Bukkit Particle 枚举名
-- `spawnDust` RGB 范围为 0-255，`size` 为粒子大小
-- `drawPath` 和 `drawPathToAll` 会从玩家位置到目标点绘制粒子路径
+- `spawnParticle` 的 `name` 使用 Bukkit Particle 枚举名（新旧名称均可，见上表）；未知名称会在控制台打印警告
+- 需要额外数据参数的粒子（如 `DUST` 需要颜色）用 `spawnParticle` 生成时会回退为 `FLAME`；彩色粒子请使用 `spawnDust` / `spawnDustTransition`
+- `spawnDust` RGB 范围为 0-255，`size` 为粒子大小（0.5-4.0）
+- `drawPath` 和 `drawPathToAll` 会从玩家位置到目标点绘制粒子路径，粒子仅对目标玩家可见
 - `density` 控制粒子密度，`maxDist` 控制最大显示距离

@@ -2,10 +2,14 @@
 
 ## 环境要求
 
-- Spigot / Paper 1.21.1+
+- Spigot / Paper 1.20.x - 1.21.x
 - Java 21+
 - NashornJS 插件（提供 JavaScript 引擎）
 - MythicMobs 5.x（怪物系统）
+
+::: tip 版本与混合端兼容
+插件同时兼容 **1.20.x 与 1.21.x** 服务端，包括 Forge 混合端（Arclight、Mohist 等）。GUI 与粒子效果已做跨版本兼容处理；脚本 API 的 `world.spawnParticle` 同时接受 1.20.5 前后的新旧粒子枚举名（如 `DUST` / `REDSTONE`），同一份副本脚本无需为不同版本修改。
+:::
 
 ## 可选插件
 

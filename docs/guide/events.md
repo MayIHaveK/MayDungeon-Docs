@@ -21,6 +21,7 @@ MayDungeon 使用事件驱动模型，副本在关键节点自动执行对应的
 | `on_area_leave.js` | 玩家离开已定义区域 | 离开的玩家 |
 | `on_interact.js` | 玩家右键方块 | 交互的玩家 |
 | `on_entity_interact.js` | 玩家右键实体/NPC | 交互的玩家 |
+| `on_boss_reward.js` | 世界 Boss 成功结束时的排行结算，先于 `on_reward.js` 触发 | null |
 | `on_reward.js` | 副本通关（仅成功时触发） | null |
 | `on_complete.js` | 副本判定为成功 | null |
 | `on_fail.js` | 副本判定为失败 | null |

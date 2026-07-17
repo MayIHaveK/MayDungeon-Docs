@@ -36,6 +36,14 @@ export default defineConfig({
           ]
         },
         {
+          text: '系统机制',
+          items: [
+            { text: '进入条件', link: '/guide/conditions' },
+            { text: '体力系统', link: '/guide/stamina' },
+            { text: '复活币', link: '/guide/revive-coin' }
+          ]
+        },
+        {
           text: '进阶',
           items: [
             { text: '世界管理', link: '/guide/world-management' },
@@ -59,6 +67,7 @@ export default defineConfig({
             { text: 'world 世界', link: '/api/world' },
             { text: 'holograms 全息', link: '/api/holograms' },
             { text: 'npc NPC', link: '/api/npc' },
+            { text: 'ranking 伤害排行', link: '/api/ranking' },
             { text: 'utils 工具', link: '/api/utils' }
           ]
         },

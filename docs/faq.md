@@ -2,6 +2,10 @@
 
 ## 安装相关
 
+### 支持哪些服务端版本？
+
+插件同时兼容 1.20.x 与 1.21.x 服务端，包括 Forge/Arclight/Mohist 等混合端。GUI 与粒子已做跨版本兼容处理；脚本中 `world.spawnParticle` 同时接受 1.20.5 前后的新旧粒子枚举名（如 `DUST` / `REDSTONE`），无需按版本修改脚本。
+
 ### 启动报 "JavaScript 引擎不可用"
 
 需要安装 NashornJS 插件。将 `NashornJs.jar` 放入 `plugins/` 目录。
