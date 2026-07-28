@@ -34,7 +34,7 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 | `/md team disband` | 解散队伍 |
 | `/md team list` | 查看队伍成员 |
 | `/md team chat <消息>` | 队伍聊天 |
-| `/md team gui` | 打开队伍 GUI |
+| `/md team gui` | 浏览可加入队伍或打开当前队伍管理 GUI |
 
 ## 管理命令
 

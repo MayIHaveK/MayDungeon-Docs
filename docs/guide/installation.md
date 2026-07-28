@@ -32,6 +32,7 @@
 3. 首次启动后，插件会自动生成：
    - `plugins/MayDungeon/config.yml` — 主配置
    - `plugins/MayDungeon/messages.yml` — 消息配置
+   - `plugins/MayDungeon/guis/dungeon-selector.yml` — 副本选择界面配置
    - `plugins/MayDungeon/dungeons/test_dungeon/` — 示例副本
    - `plugins/MayDungeon/examples_mythicmobs/` — MM怪物配置
 

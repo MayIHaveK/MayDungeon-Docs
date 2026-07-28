@@ -22,7 +22,8 @@ export default defineConfig({
             { text: '安装', link: '/guide/installation' },
             { text: '快速开始', link: '/guide/quick-start' },
             { text: '创建副本', link: '/guide/create-dungeon' },
-            { text: '配置文件', link: '/guide/config' }
+            { text: '配置文件', link: '/guide/config' },
+            { text: '界面配置', link: '/guide/gui-config' }
           ]
         },
         {

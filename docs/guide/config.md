@@ -77,6 +77,21 @@ world:
 若副本地图依赖模板范围外继续生成原版地形，请将 `void-outside-template` 设为 `false`。`instances/` 是临时目录，请勿在其中手工建图或存放文件。
 :::
 
+## 队伍设置（team）
+
+```yaml
+team:
+  # 队伍总人数上限，包含队长，最小为 1
+  max-players: 20
+  # 所有成员离线后自动解散
+  auto-disband:
+    enabled: true
+    # 最后一名在线成员离线后等待多少秒再复查
+    delay-seconds: 60
+```
+
+修改后执行 `/md admin reload` 生效。旧配置 `dungeon.team-player-limit` 仍兼容；同时存在时优先使用 `team.max-players`。
+
 ## 全局副本设置（dungeon）
 
 ```yaml
@@ -87,7 +102,7 @@ dungeon:
     prefix: "&f[&6队内消息&f] &7%player_name%&f&l:"
   # 离线保护超时（秒）- 超时后自动退出副本
   offline-timeout: 120
-  # 队伍玩家数量上限
+  # 旧版队伍人数上限，仅在未配置 team.max-players 时生效
   team-player-limit: 20
   # 视图类型: CHAT / BOOK
   view-type: "CHAT"
