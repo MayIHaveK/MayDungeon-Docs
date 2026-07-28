@@ -11,7 +11,7 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 | `in_dungeon` | 玩家是否在副本中（true/false） |
 | `dungeon_name` | 当前副本显示名称 |
 | `dungeon_id` | 当前副本 ID |
-| `state` | 副本状态（RUNNING/COMPLETED/FAILED） |
+| `state` | 副本状态：`CREATING`、`WAITING`、`RUNNING`、`COMPLETED`、`FAILED` 或 `ENDING` |
 | `elapsed_time` | 已过时间（秒） |
 | `elapsed_time_formatted` | 已过时间（格式化，如 05:30） |
 | `time_left` | 剩余时间（秒） |
@@ -28,7 +28,7 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 
 | 占位符 | 说明 |
 |--------|------|
-| `kills` | 个人击杀数 |
+| `kills` | 当前副本全队总击杀数 |
 | `deaths` | 个人死亡数 |
 | `revive_remaining` | 剩余复活次数（-1=无限） |
 | `revive_coins` | 复活币余额 |
@@ -84,7 +84,7 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 |--------|------|
 | `kill_<怪物名>` | 指定怪物击杀数（如 `kill_zombie`） |
 | `data_<key>` | 读取副本运行时数据（如 `data_score`） |
-| `item_<MATERIAL>` | 玩家背包中指定材质物品数量 |
+| `item_<MATERIAL>` | 玩家在副本内时，背包中指定 Bukkit 材质的物品数量 |
 
 ## 使用示例
 
@@ -124,4 +124,6 @@ lines:
 - 玩家不在副本中时，副本相关占位符返回空字符串或 "0"
 - `team_<N>_player_<属性>` 中序号超出范围返回空字符串
 - `daily_left_`、`daily_used_`、`daily_max_` 注意比 `daily_` 多一级，含义不同
-- 所有占位符异步安全（内存缓存读取，零 IO）
+- `%md_kills%` 是全队总击杀；个人击杀请使用 `%md_team_<N>_player_kills%`
+- 不限次数时，`daily_max_` 与 `daily_left_` 返回 `-1`
+- 未识别的变量由扩展返回 `null`，其余副本外变量按上表语义返回空字符串、`0` 或 `false`

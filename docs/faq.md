@@ -18,6 +18,10 @@
 
 检查 MythicMobs 配置是否正确放入并 reload。执行 `/mm mobs` 确认怪物已注册。
 
+### 授权验证失败
+
+确认 `config.yml` 中的 `bind.qq` 与发布方提供的信息一致，并检查服务器能否正常联网。若仍失败，请保留完整启动日志联系发布方；不要公开粘贴授权文件或机器信息。
+
 ### Overture 物品消耗一直提示不足
 
 确认服务器已安装并启用 Overture，且 `item-cost` 中的 ID 与 Overture 物品 ID 完全一致，例如：
@@ -48,11 +52,30 @@ conditions:
 
 检查 `obstacles.yml` 中的坐标是否在地图范围内。确认 `obstacles.define()` 在 `on_init.js` 中被正确调用。
 
+### 安装 DragonMineZ 后，副本内无法近战攻击
+
+当前版本会在玩家进出副本世界后自动补发 DragonMineZ 状态同步，无需额外开关。请先确认 MayDungeon 已更新到最新发布版并重新进本测试。
+
+若问题仍能复现，可临时开启：
+
+```yaml
+dungeon:
+  dbz:
+    debug: true
+    probe-interval-ticks: 20
+```
+
+重启后复现一次，保存控制台中的 `[DBZ]`、`[DBZ-PROBE]` 和 `[DBZ-DEBUG]` 日志，然后将 `debug` 改回 `false`。诊断模式只读取状态，但日志量很大，不要长期开启。
+
+### 副本外出现大片虚空
+
+默认 `world.void-outside-template: true`，模板地图现有区块之外不会生成原版地形。需要开放式原版地形的副本应改为 `false` 并重启服务器；普通封闭副本建议保持默认值。
+
 ## 性能相关
 
 ### 同时运行多个副本卡顿
 
-调整 `config.yml` 中的 `world.max-concurrent-copies` 降低并发复制数。
+先降低 `world.max-concurrent-copies` 和 `world.preload-chunks-per-tick`，并缩小 `preload-chunk-radius`。模板地图较大时保持 `copy-mode: "link"`，详见 [性能调优](/guide/performance)。
 
 ### 脚本执行很慢
 

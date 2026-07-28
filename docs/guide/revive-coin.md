@@ -72,8 +72,6 @@ revive:
 - **SQLite**：`player_revive_coins` 表
 - **MySQL**：`{prefix}player_revive_coins` 表
 
-采用内存缓存 + 异步批量刷盘架构，读取操作零 IO。
-
 ## 获取复活币
 
 复活币的获取途径由服务器管理员自行设计，常见方式：
@@ -93,12 +91,12 @@ for (var i = 0; i < allPlayers.length; i++) {
 }
 ```
 
-## 安全设计
+## 使用注意
 
-- GUI点击确认前会二次验证所有条件（玩家仍死亡、副本仍运行、有币）
-- 复活币扣除使用原子操作（synchronized tryDeduct），防止并发双扣
-- 被 `/md revive` 复活后再点击GUI会提示"你已经复活了"
-- 所有 Inventory 点击事件都 cancel，防止物品移动
+- 只有玩家仍处于死亡状态、副本仍在运行且余额足够时，确认按钮才会成功。
+- 已通过 `/md revive` 复活后再次点击确认，不会重复扣币。
+- 若某副本不应使用复活币，请在该副本设置 `revive.allow-revive-coin: false`。
+- 管理员批量发放后，可用 `/md admin revivecoin <玩家>` 抽查余额。
 
 ## 测试指南
 

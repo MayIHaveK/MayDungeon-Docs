@@ -1,77 +1,74 @@
 # 世界管理
 
-MayDungeon 通过复制模板世界来创建副本实例，本节介绍世界管理相关内容。
+MayDungeon 从 `plugins/MayDungeon/maps/<地图名>/` 读取模板，每次开本创建独立的临时世界。副本结束后临时世界会自动卸载和清理，模板地图不会被当作运行中的副本直接使用。
 
-## 工作原理
+## 准备模板地图
 
-1. 服务器启动时加载模板世界
-2. 玩家进入副本时，复制模板世界为实例世界
-3. 副本结束后，卸载并删除实例世界
+### 从现有世界导入
 
-```
-模板世界                    实例世界
-dungeon_abyss/    →复制→    md_instance_abyss_001/
-  region/                     region/
-  level.dat                   level.dat
-```
+1. 确认地图当前未被服务器加载。
+2. 执行 `/md admin import <世界名>`。
+3. 在副本的 `dungeon.yml` 中将 `map-name` 设为导入后的模板名。
+4. 执行 `/md admin reload`，再用测试账号进入副本。
 
-## 模板世界准备
+也可以在停服状态下将完整世界目录放入 `plugins/MayDungeon/maps/`。不要复制正在运行的世界，也不要把模板放入 `instances/`。
 
-### 方式一：在服务器中直接构建
-
-1. 使用 Multiverse 创建空世界
-2. 在世界中构建副本地图
-3. 在 `dungeon.yml` 中引用世界名
-
-### 方式二：导入外部地图
-
-将世界文件夹放入服务器根目录，确保包含 `region/` 目录和 `level.dat` 文件。
-
-## 世界配置
+## 配置
 
 ```yaml
-# config.yml
 world:
-  # 实例世界命名前缀
-  prefix: "md_instance_"
-  # 世界复制方式: file_copy / slime
-  copy-method: "file_copy"
-  # 复制完成后是否立即加载
-  auto-load: true
-  # 卸载延迟（tick），用于玩家传出
-  unload-delay: 60
-  # 最大并存实例世界数
-  max-worlds: 20
+  instance-dir: "instances"
+  max-concurrent-copies: 2
+  create-interval: 1000
+  copy-exclude:
+    - "session.lock"
+    - "uid.dat"
+    - "playerdata"
+    - "advancements"
+    - "stats"
+  idle-chunk-unload: true
+  preload-chunk-radius: 3
+  preload-chunks-per-tick: 4
+  instance-view-distance: 6
+  copy-mode: "link"
+  void-outside-template: true
 ```
 
-## 脚本中的世界操作
+| 配置 | 使用建议 |
+|------|----------|
+| `instance-dir` | 保持默认；该目录只存放临时实例 |
+| `max-concurrent-copies` | 同时创建世界的数量，卡顿时降低 |
+| `create-interval` | 两次创建请求的最小间隔，单位毫秒 |
+| `preload-chunk-radius` | 进入前预加载出生点周围多少圈区块 |
+| `preload-chunks-per-tick` | 每 tick 的预加载预算；越高完成越快，瞬时压力也越大 |
+| `instance-view-distance` | 副本视距；`0` 跟随服务端默认值 |
+| `copy-mode` | `link` 更快且省空间；不支持时自动回退，`copy` 始终完整复制 |
+| `void-outside-template` | `true` 时模板已有区块之外为虚空 |
 
-```javascript
-function on_init() {
-    // 设置世界规则
-    world.setGameRule("doDaylightCycle", false);
-    world.setGameRule("doMobSpawning", false);
-    world.setTime(6000);
-    world.setWeather("clear");
-    
-    // 放置/修改方块
-    world.setBlock(100, 64, 100, "STONE");
-    world.fill(90, 60, 90, 110, 64, 110, "OBSIDIAN");
-}
+修改这些选项后建议重启服务器。若地图需要在模板边界外生成原版地形，必须关闭 `void-outside-template`。
+
+## 世界池
+
+热门副本可以提前缓存实例：
+
+```yaml
+world:
+  pool:
+    enabled: true
+    dungeons:
+      test_dungeon:
+        cache-size: 2
+        instance-keep: false
+    refill-interval: 30
 ```
 
-## 世界回收
+缓存会占用额外资源，建议从 `cache-size: 1` 开始。低频地图无需启用。
 
-副本结束后世界会自动回收。回收流程：
+## 日常检查
 
-1. 传送所有玩家至退出点
-2. 卸载世界（等待区块保存）
-3. 删除世界文件夹
+- `/md admin instances`：查看当前运行实例。
+- `/md admin tp <实例ID>`：进入实例检查。
+- `/md admin forceend <实例ID>`：结束异常实例。
+- 控制台持续报告世界无法卸载时，先移出其中玩家并正常重启服务器。
 
-如果回收失败（如文件被占用），插件会在下次启动时重试清理。
-
-## 常见问题
-
-- **世界加载慢**：减小模板世界体积，只保留必要区块
-- **文件占用**：确保无其他插件持有世界引用
-- **磁盘空间不足**：控制 `max-worlds` 参数，启用自动清理
+不要在服务器运行时直接删除实例目录。异常关服后的处理见 [关服与异常恢复](./recovery.md)，加载耗时和内存问题见 [性能调优](./performance.md)。

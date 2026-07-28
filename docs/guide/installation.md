@@ -18,11 +18,12 @@
 - Adyeshach — 虚拟 NPC 系统
 - Vault — 经济系统
 - Overture — 物品库，可用于 `overture:<物品ID>:<数量>` 入场消耗
+- DragonMineZ — 可选兼容；进出副本时自动补发角色状态同步
 
 ## 安装步骤
 
 1. 将以下插件 JAR 放入 `plugins/` 目录：
-   - `MayDungeon-1.0.0-SNAPSHOT.jar`
+   - 你获得的 `MayDungeon` 发布版 JAR
    - `NashornJs.jar`
    - `MythicMobs.jar`
 
@@ -45,4 +46,8 @@
 
 ::: tip
 如果看到"地图不存在"的警告，这是正常的——放入地图后 reload 即可。插件不会因为缺少地图而崩溃。
+:::
+
+::: warning 授权绑定
+首次安装时按发布方提供的信息填写 `plugins/MayDungeon/config.yml` 中的 `bind.qq`。授权失败时请保留完整控制台提示并联系发布方，不要公开发送授权文件或机器信息。
 :::

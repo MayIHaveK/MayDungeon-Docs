@@ -29,7 +29,7 @@ storage:
 | `sqlite` | 单文件数据库，路径由 `sqlite.file` 指定 | 中型服务器，玩家较多时性能更好 |
 | `mysql` | 远程数据库，表名带 `table-prefix` 前缀 | 大型服务器 / 跨服共享数据 |
 
-切换后端后需重启服务器。存储层为抽象接口，三种后端功能完全一致。
+切换后端后需重启服务器。插件不会自动迁移旧后端中的玩家数据，切换前请先停服并备份。
 
 ## 世界管理（world）
 
@@ -52,6 +52,14 @@ world:
   idle-chunk-unload: true
   # 预加载出生点周围区块半径
   preload-chunk-radius: 3
+  # 每 tick 最多预加载多少区块；越大越快，但单 tick 压力越高
+  preload-chunks-per-tick: 4
+  # 副本世界视距；0 表示跟随服务端默认值
+  instance-view-distance: 6
+  # link 优先使用硬链接，失败时自动回退完整复制；copy 始终完整复制
+  copy-mode: "link"
+  # 模板已有范围外生成虚空，避免越界生成原版地形
+  void-outside-template: true
 
   # 世界池设置（可选性能优化）
   pool:
@@ -64,6 +72,10 @@ world:
 ```
 
 详细说明请参考 [世界管理](./world-management.md) 和 [性能优化](./performance.md)。
+
+::: warning
+若副本地图依赖模板范围外继续生成原版地形，请将 `void-outside-template` 设为 `false`。`instances/` 是临时目录，请勿在其中手工建图或存放文件。
+:::
 
 ## 全局副本设置（dungeon）
 
@@ -104,7 +116,14 @@ dungeon:
     enabled: false
     # 同时最大创建副本数
     max-concurrent: 3
+
+  # 仅安装 DragonMineZ 时生效；正常使用保持关闭
+  dbz:
+    debug: false
+    probe-interval-ticks: 20
 ```
+
+MayDungeon 会在玩家进出副本世界后自动补发 DragonMineZ 状态同步，不需要额外开关，也不会修改玩家数值。只有排查“副本内无法近战攻击”时才临时开启 `dungeon.dbz.debug`；定位结束后立即关闭，以免控制台刷屏。
 
 ## 全局设置（setting）
 

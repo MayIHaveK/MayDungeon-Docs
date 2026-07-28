@@ -1,135 +1,86 @@
-# 性能优化
+# 性能调优
 
-本节介绍 MayDungeon 的性能架构设计与优化建议。
+本页面向服主，说明遇到加载慢、TPS 下降或内存占用偏高时应如何调整。修改 `config.yml` 后，建议重启服务器使世界和存储相关设置完整生效。
 
-## 架构设计
+## 先确认瓶颈
 
-### 内存缓存系统
+| 现象 | 优先检查 |
+|------|----------|
+| 进入副本等待很久 | 模板地图大小、磁盘速度、`copy-mode` |
+| 多队同时开本时卡顿 | `max-concurrent-copies`、队列并发、区块预加载预算 |
+| 副本运行一段时间后内存上升 | 实例视距、空闲区块卸载、控制台中的世界回收警告 |
+| 怪物阶段 TPS 下降 | 同时存活怪物数、技能频率、脚本定时器间隔 |
+| 玩家数据保存造成波动 | 存储后端和保存间隔 |
 
-MayDungeon 的体力系统和每日次数系统采用**内存缓存 + 异步刷盘**架构：
+可使用 `/md admin instances` 查看当前实例，结合服务端自带的 TPS/MSPT 信息或 spark 定位高峰发生在创建阶段还是战斗阶段。
 
-- 玩家上线时从存储层加载数据到 `ConcurrentHashMap` 内存缓存
-- 所有读取操作直接走内存，零 IO 开销
-- 写操作更新内存并标记 dirty，定时任务异步批量刷盘
-- 玩家下线时同步持久化，确保数据不丢
-- MySQL 后端使用 `executeBatch()` 批量操作，减少网络往返
-
-### 懒计算策略
-
-- 体力恢复：不维护定时任务逐玩家更新，每次读取时根据时间差计算实际恢复量
-- 每日重置：读取时比对日期，跨天自动重置（无需全局遍历）
-- 重置日期计算结果缓存 1 秒（`volatile` + 过期时间戳），避免高频占位符调用时的时间计算开销
-
-### 预扣消耗模式
-
-所有进入条件检查通过后，体力/金币/物品在同一同步调用中**立即预扣**（而非在异步世界创建后扣除），消除了 TOCTOU 竞态窗口。如果世界创建失败，体力和金币自动退还。
-
-## 常见性能瓶颈
-
-| 瓶颈 | 原因 | 解决方案 |
-|------|------|----------|
-| 世界复制慢 | 模板世界过大 | 精简模板，只保留必要区块 |
-| TPS 下降 | 怪物数量过多 | 分批生成，限制同时存活数 |
-| 内存不足 | 实例世界未回收 | 调低 max-instances，检查清理逻辑 |
-| 磁盘 IO | 频繁创建/删除世界 | 使用 SSD，启用世界池预缓存 |
-
-## 世界优化
+## 推荐起点
 
 ```yaml
-# config.yml
 world:
-  max-concurrent-copies: 2     # 同时最大并行复制数
-  create-interval: 1000        # 世界创建最小间隔（毫秒）
-  idle-chunk-unload: true      # 空闲区块自动卸载
-  preload-chunk-radius: 3      # 预加载区块半径
+  max-concurrent-copies: 2
+  create-interval: 1000
+  copy-mode: "link"
+  idle-chunk-unload: true
+  preload-chunk-radius: 3
+  preload-chunks-per-tick: 4
+  instance-view-distance: 6
+  void-outside-template: true
   pool:
-    enabled: true              # 启用世界池预缓存
-    refill-interval: 30        # 缓存补充检查间隔（秒）
+    enabled: false
+
+dungeon:
+  queue:
+    enabled: false
+    max-concurrent: 3
 ```
 
-### 模板世界瘦身
+### 地图加载慢
 
-- 使用 WorldBorder 限制世界大小
-- 删除无用区块（使用 MCA Selector）
-- 关闭副本世界的自动保存
-- `copy-exclude` 排除不需要的文件
+- 优先使用 `copy-mode: "link"`。文件系统不支持硬链接时插件会自动回退为完整复制。
+- 精简模板世界，只保留副本需要的区块；删除 `playerdata`、`stats` 等无关数据。
+- `preload-chunk-radius` 越大，首次进入前加载的区块越多。小地图通常使用 `2-3` 即可。
+- 适当提高 `preload-chunks-per-tick` 可缩短等待，但会增加单 tick 压力；卡顿时应降低。
+- 玩家频繁重复进入同一地图时，再考虑为该副本启用世界池。
 
-## 数据存储性能
+### 运行时内存偏高
 
-| 存储后端 | 适用场景 | 特点 |
-|---------|---------|------|
-| YAML | 小型服（<30人） | 零依赖，文件 IO 在异步线程 |
-| SQLite | 中型服（30-100人） | 本地数据库，WAL 模式并发友好 |
-| MySQL | 大型服/跨服 | 批量操作优化，支持远程数据库 |
+- 将 `instance-view-distance` 设为 `4-6`；设为 `0` 表示跟随服务端默认视距。
+- 保持 `idle-chunk-unload: true`。
+- 保持 `void-outside-template: true`，避免玩家越界时生成大量新地形。确实依赖模板外原版地形的地图才关闭它。
+- 用 `/md admin instances` 确认已经结束的实例不再出现。若控制台持续提示实例世界无法回收，请保存日志并重启服务器，不要手动删除仍处于加载状态的世界目录。
 
-### 刷盘间隔配置
+## 世界池
+
+世界池适合固定热门副本，可减少玩家点击开始后的等待时间，但会预先占用磁盘和内存：
 
 ```yaml
-stamina:
-  save-interval: 60       # 体力数据刷盘间隔（秒）
-
-daily-limit:
-  save-interval: 120      # 每日次数刷盘间隔（秒）
+world:
+  pool:
+    enabled: true
+    dungeons:
+      test_dungeon:
+        cache-size: 2
+        instance-keep: false
+    refill-interval: 30
 ```
 
-- 间隔越短数据越安全（崩服最多丢失 N 秒数据）
-- 间隔越长 IO 越少（对 YAML/SQLite 文件的写入更少）
-- 推荐：小服 120-300 秒，大服 30-60 秒
+先从 `cache-size: 1` 或 `2` 开始观察。低频副本不建议配置缓存。
 
-## 脚本优化
+## 怪物与脚本
 
-```javascript
-// 避免：每tick遍历所有玩家
-function on_timer(id) {
-    // 好的做法：使用缓存变量
-    if (id === "check") {
-        var count = monsters.remaining();
-        if (count <= 0) {
-            dungeon.complete();
-        }
-    }
-}
-```
+- 单波尽量控制在 10 只以内，同时存活怪物建议不超过 30 只。
+- 大批怪物分波生成，避免同一 tick 创建大量实体。
+- 周期任务通常不要短于 20 tick；高频事件中避免全员遍历、命令连发和大量粒子。
+- 用 `monsters.remaining()` 判断清场，无需自行扫描世界实体。
+- 结束阶段记得取消不再需要的定时任务。
 
-### 脚本注意事项
+## 存储选择
 
-- 避免在高频事件中执行复杂计算
-- 定时器间隔不要太短（建议 >= 20 tick）
-- 使用 `dungeon.timer()` 替代循环检测
-- `monsters.remaining()` 现在是 O(1) 内存读取，可放心使用
-
-## 怪物优化
-
-- 单次生成不超过 10 只怪物
-- 控制副本内最大存活怪物数（建议 <= 30）
-- 怪物存活数查询为 O(1)（直接返回 Set.size）
-- 失效实体清理自动在后台低频执行（每 5 秒）
-
-## 内部性能设计
-
-| 子系统 | 设计要点 |
-|--------|---------|
-| 传送绕过标记 | `Map<UUID,Long>` + 30秒定时清理过期条目 |
-| 副本查找 | worldName → instanceId 反向索引，O(1) |
-| 区域检测 | 按区块索引候选区域，减少遍历；复用集合对象减少 GC |
-| 怪物计数 | 内存 Set.size() O(1)，后台低频验证清理失效实体 |
-| 物品消耗 | 地牢加载时预解析并缓存 MythicMobs ItemStack |
-| 命令过滤 | 预处理为小写，for 循环替代 Stream |
-| 击杀统计 | int 计数器直接返回，非 Stream 求和 |
-
-## 监控命令
-
-| 命令 | 说明 |
+| 场景 | 建议 |
 |------|------|
-| `/md admin instances` | 查看当前活跃副本列表 |
-| `/md stamina` | 查看体力值 |
-| `/md admin stamina <玩家>` | 查看指定玩家体力 |
-| `/md admin dailylimit <玩家> <地牢>` | 查看今日次数 |
+| 单服、小规模 | YAML |
+| 单服、玩家数据较多 | SQLite |
+| 多服共享或独立数据库 | MySQL |
 
-## 推荐配置
-
-| 服务器规模 | 最大并行副本 | 世界池 | 建议内存 | 存储后端 |
-|-----------|------------|--------|---------|---------|
-| 小型 (< 20人) | 5 | 关闭 | 4 GB | YAML |
-| 中型 (20-50人) | 10 | 启用 | 8 GB | SQLite |
-| 大型 (50+人) | 20 | 启用 | 16 GB | MySQL |
+`stamina.save-interval`、`daily-limit.save-interval` 和 `revive-coin.save-interval` 越短，写入越频繁。默认值通常足够；只有确认写入是瓶颈后再逐步提高，不要把间隔设得过长。
