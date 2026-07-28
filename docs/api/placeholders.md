@@ -78,6 +78,19 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 | `daily_max_<地牢ID>` | 今日最大挑战次数（-1=无限制） |
 | `daily_left_<地牢ID>` | 今日剩余次数（-1=无限制） |
 
+### 伤害排行
+
+| 占位符 | 说明 |
+|--------|------|
+| `rank_list_<序号>_name` | 指定名次玩家的名称，序号从 `0` 开始 |
+| `rank_list_<序号>_damage` | 指定名次玩家的累计伤害 |
+| `rank_list_<序号>_damage_percent` | 指定名次伤害占当前副本总伤害的百分比（0-100） |
+| `rank_self` | 当前玩家的伤害名次，从 `1` 开始；未上榜返回 `0` |
+
+榜单按伤害从高到低排列，伤害和百分比最多保留两位小数。超出榜单范围时，`name` 返回空字符串，`damage` 与 `damage_percent` 返回 `0`。
+
+这些变量读取当前副本的 [`ranking` 伤害排行数据](./ranking.md)。副本脚本需要在有效伤害事件中调用 `ranking.addDamage(...)`；未记录伤害时榜单为空。
+
 ### 动态数据
 
 | 占位符 | 说明 |
@@ -118,6 +131,16 @@ lines:
   - "&d强化本: %md_daily_left_enhance_dungeon%次剩余"
 ```
 
+### 伤害排行榜
+
+```yaml
+lines:
+  - "&6伤害榜 &7| &f我的排名: &e%md_rank_self%"
+  - "&e1. %md_rank_list_0_name% &7- &f%md_rank_list_0_damage% &8(%md_rank_list_0_damage_percent%%%)"
+  - "&f2. %md_rank_list_1_name% &7- &f%md_rank_list_1_damage% &8(%md_rank_list_1_damage_percent%%%)"
+  - "&63. %md_rank_list_2_name% &7- &f%md_rank_list_2_damage% &8(%md_rank_list_2_damage_percent%%%)"
+```
+
 ## 注意事项
 
 - 前缀 `%maydungeon_xxx%` 和 `%md_xxx%` 完全等效，推荐使用短前缀
@@ -125,5 +148,6 @@ lines:
 - `team_<N>_player_<属性>` 中序号超出范围返回空字符串
 - `daily_left_`、`daily_used_`、`daily_max_` 注意比 `daily_` 多一级，含义不同
 - `%md_kills%` 是全队总击杀；个人击杀请使用 `%md_team_<N>_player_kills%`
+- `rank_list_<序号>_*` 的序号从 `0` 开始，而 `rank_self` 返回的实际名次从 `1` 开始
 - 不限次数时，`daily_max_` 与 `daily_left_` 返回 `-1`
 - 未识别的变量由扩展返回 `null`，其余副本外变量按上表语义返回空字符串、`0` 或 `false`
