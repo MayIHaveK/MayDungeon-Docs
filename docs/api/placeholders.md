@@ -89,7 +89,7 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 
 榜单按伤害从高到低排列，伤害和百分比最多保留两位小数。超出榜单范围时，`name` 返回空字符串，`damage` 与 `damage_percent` 返回 `0`。
 
-这些变量读取当前副本的 [`ranking` 伤害排行数据](./ranking.md)。副本脚本需要在有效伤害事件中调用 `ranking.addDamage(...)`；未记录伤害时榜单为空。
+这些变量读取插件为当前副本自动统计的有效伤害（包括击杀时的剩余生命补记）；未造成有效伤害时榜单为空。普通的 `on_damage` 脚本不需要再调用 `ranking.addDamage(...)`，该方法仅用于脚本主动产生、且没有经过 Bukkit 伤害事件的额外伤害记录。
 
 ### 动态数据
 
