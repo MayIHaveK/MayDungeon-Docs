@@ -33,6 +33,7 @@
    - `plugins/MayDungeon/config.yml` — 主配置
    - `plugins/MayDungeon/messages.yml` — 消息配置
    - `plugins/MayDungeon/guis/dungeon-selector.yml` — 副本选择界面配置
+   - `plugins/MayDungeon/guis/dungeon-menus/example.yml` — 独立副本菜单示例
    - `plugins/MayDungeon/dungeons/test_dungeon/` — 示例副本
    - `plugins/MayDungeon/examples_mythicmobs/` — MM怪物配置
 

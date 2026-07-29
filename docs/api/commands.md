@@ -14,6 +14,7 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 | `/md status` | 查看当前副本状态 |
 | `/md stamina` | 查看自己的体力和恢复模式 |
 | `/md gui` | 打开副本选择 GUI |
+| `/md gui <菜单ID>` | 打开 `guis/dungeon-menus/` 中配置的独立副本菜单 |
 | `/md help` | 查看帮助信息 |
 
 ## 组队命令
