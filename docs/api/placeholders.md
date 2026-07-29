@@ -55,6 +55,7 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 | 占位符 | 说明 |
 |--------|------|
 | `team_0_player_name` | 队长名字 |
+| `team_0_player_level` | 队长当前经验等级，离线时返回 `0` |
 | `team_0_player_health` | 队长当前血量 |
 | `team_0_player_max_health` | 队长最大血量 |
 | `team_0_player_health_percent` | 队长血量百分比 |
@@ -65,9 +66,9 @@ MayDungeon 提供 PlaceholderAPI 占位符，支持双前缀：`%maydungeon_xxx%
 | `team_0_player_revive_remaining` | 队长剩余复活次数 |
 | `team_1_player_uuid` | 第2个成员的 UUID |
 
-支持的属性：`name`、`health`、`max_health`、`health_percent`、`kills`、`deaths`、`alive`、`online`、`revive_remaining`、`uuid`。
+支持的属性：`name`、`level`、`health`、`max_health`、`health_percent`、`kills`、`deaths`、`alive`、`online`、`revive_remaining`、`uuid`。
 
-其中 `name`、`uuid`、`online`、`health`、`max_health`、`health_percent` 在副本外也可读取；`kills`、`deaths`、`alive`、`revive_remaining` 依赖副本实例，副本外返回安全默认值。
+其中 `name`、`uuid`、`online`、`level`、`health`、`max_health`、`health_percent` 在副本外也可读取；玩家离线时 `level` 返回 `0`。`kills`、`deaths`、`alive`、`revive_remaining` 依赖副本实例，副本外返回安全默认值。
 
 ### 每日挑战次数
 
