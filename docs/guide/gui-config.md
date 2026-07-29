@@ -85,6 +85,51 @@ items:
 
 `filler.enabled: true` 可使用指定物品填充空槽。操作按钮和副本物品会覆盖对应位置的填充物。
 
+## 副本详情二级界面
+
+玩家在 `/md gui` 的全部副本列表中点击副本后，会打开详情二级界面。二级界面在同一个 `guis/dungeon-selector.yml` 中配置：
+
+```yaml
+detail-menu:
+  enabled: true
+  title: "&8%name%"
+  rows: 3
+
+  filler:
+    enabled: true
+    material: GRAY_STAINED_GLASS_PANE
+    name: " "
+
+  dungeon-item:
+    enabled: true
+    slot: 13
+    material: ENDER_EYE
+    name: "&6%name%"
+    lore:
+      - "&7%description%"
+      - "&7人数: &f%min_players%-%max_players%"
+      - "&7难度: &f%difficulty%"
+
+  items:
+    back:
+      enabled: true
+      slot: 18
+      material: ARROW
+      name: "&e返回副本列表"
+    enter:
+      enabled: true
+      slot: 26
+      material: LIME_DYE
+      name: "&a进入副本"
+      lore:
+        - "&7点击传送至 &f%name%"
+      command: "md start %id%"
+```
+
+标题、展示物品、按钮名称、lore 和进入命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%` 和 `%player%`。`command` 由点击玩家执行，开头的 `/` 可写可不写；关闭 `detail-menu.enabled` 后，主列表恢复为点击副本直接执行 `/md start <副本ID>`。
+
+独立副本菜单仍按各按钮的 `command` 直接执行，不经过详情二级界面。
+
 ## 独立副本菜单
 
 除 `/md gui` 的全部副本列表外，还可以在 `plugins/MayDungeon/guis/dungeon-menus/` 中创建多个独立菜单。YAML 文件名就是菜单 ID，例如 `featured.yml` 使用 `/md gui featured` 打开。
