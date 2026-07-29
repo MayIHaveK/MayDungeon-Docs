@@ -87,7 +87,7 @@ items:
 
 ## 副本详情二级界面
 
-玩家在 `/md gui` 的全部副本列表中点击副本后，会打开详情二级界面。二级界面在同一个 `guis/dungeon-selector.yml` 中配置：
+玩家在 `/md gui` 的全部副本列表或 `/md gui <菜单ID>` 的独立副本菜单中点击副本后，都会打开详情二级界面。二级界面在 `guis/dungeon-selector.yml` 中统一配置：
 
 ```yaml
 detail-menu:
@@ -126,9 +126,9 @@ detail-menu:
       command: "md start %id%"
 ```
 
-标题、展示物品、按钮名称、lore 和进入命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%` 和 `%player%`。`command` 由点击玩家执行，开头的 `/` 可写可不写；关闭 `detail-menu.enabled` 后，主列表恢复为点击副本直接执行 `/md start <副本ID>`。
+标题、展示物品、按钮名称、lore 和进入命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%` 和 `%player%`。进入命令由点击玩家执行，开头的 `/` 可写可不写。来自全部副本列表时使用 `detail-menu.items.enter.command`；来自独立菜单时使用对应 `buttons.<按钮ID>.command`。返回按钮会回到打开详情页之前的全部副本列表页或独立菜单。
 
-独立副本菜单仍按各按钮的 `command` 直接执行，不经过详情二级界面。
+关闭 `detail-menu.enabled` 后，全部副本列表和独立菜单都会恢复为点击副本直接执行进入命令。
 
 ## 独立副本菜单
 
@@ -158,7 +158,7 @@ buttons:
       - ""
       - "&7人数: &f%min_players%-%max_players%"
       - "&7难度: &f%difficulty%"
-      - "&a左键进入副本"
+      - "&a左键查看副本详情"
     command: "md start %id%"
 
   hard:
@@ -168,7 +168,7 @@ buttons:
     name: "&c%name%"
     lore:
       - "&7%description%"
-      - "&a左键进入副本"
+      - "&a左键查看副本详情"
     command: "md start %id%"
 
 items:
@@ -182,9 +182,9 @@ items:
 - `buttons` 中只会显示插件当前已加载的副本，`dungeon` 填写副本 ID。
 - `slot` 从 `0` 开始，必须小于 `rows × 9`；多个按钮不要使用同一槽位。
 - `material`、`name` 和 `lore` 均可为每个副本按钮单独设置。
-- `command` 在玩家左键按钮时以该玩家身份执行，开头的 `/` 可写可不写；默认值为 `md start %id%`。
+- `command` 在玩家进入详情页后点击“进入副本”时以该玩家身份执行，开头的 `/` 可写可不写；默认值为 `md start %id%`。
 - `permission` 留空时不限制打开菜单；填写后，玩家必须拥有该权限。
-- `close-on-click` 控制执行命令前是否关闭菜单，也可在某个按钮内单独配置。
+- `close-on-click` 在 `detail-menu.enabled: false` 的直接执行模式下控制执行命令前是否关闭菜单，也可在某个按钮内单独配置。
 - 菜单 ID 仅使用小写字母、数字、下划线和连字符，例如 `daily_dungeons`。
 
 独立菜单的标题、物品名称、lore 和命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%` 和 `%player%`。修改或新增菜单后执行 `/md admin reload` 生效。
