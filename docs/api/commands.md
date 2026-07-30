@@ -39,7 +39,7 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 
 ## 管理命令
 
-需要 `maydungeon.admin` 权限。
+默认由 `maydungeon.admin` 授权，也可以使用 `maydungeon.command.admin.<子命令>` 单独授权。
 
 | 命令 | 说明 |
 |------|------|
@@ -86,7 +86,7 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 
 ## 编辑器命令
 
-用于副本地图可视化编辑，需要 `maydungeon.admin` 权限。
+用于副本地图可视化编辑。默认由 `maydungeon.admin` 授权，也可以使用 `maydungeon.command.editor.<子命令>` 单独授权。
 
 | 命令 | 说明 |
 |------|------|
@@ -105,4 +105,4 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 
 | 命令 | 说明 |
 |------|------|
-| `/md script <JS代码>` | 在当前副本中执行 JS 代码（需 `maydungeon.admin` 权限，且 `config.yml` 中 `script.allow-inline-command: true`） |
+| `/md script <JS代码>` | 在当前副本中执行 JS 代码（需 `maydungeon.command.script` 权限，且 `config.yml` 中 `script.allow-inline-command: true`） |
