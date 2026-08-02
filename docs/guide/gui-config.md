@@ -92,8 +92,8 @@ items:
 ```yaml
 detail-menu:
   enabled: true
-  title: "&8%name%"
-  rows: 3
+  title: "&8%name% &7- %difficulty_name%"
+  rows: 6
 
   filler:
     enabled: true
@@ -102,31 +102,109 @@ detail-menu:
 
   dungeon-item:
     enabled: true
-    slot: 13
+    slot: 4
     material: ENDER_EYE
     name: "&6%name%"
     lore:
       - "&7%description%"
       - "&7人数: &f%min_players%-%max_players%"
-      - "&7难度: &f%difficulty%"
+      - "&7选择难度: &f%difficulty_name%"
+
+  selected-difficulty-lore:
+    - ""
+    - "&a已选择"
+
+  # 第 4、5 行，共 18 个掉落预览槽位
+  drop-slots: [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44]
+
+  dungeons:
+    test_dungeon:
+      default-difficulty: normal
+      difficulties:
+        normal:
+          enabled: true
+          display-name: "&a普通"
+          slot: 10
+          material: LIME_DYE
+          selected-material: LIME_CONCRETE
+          name: "&a普通难度"
+          lore:
+            - "&7适合常规队伍"
+            - "&e点击选择"
+          script: "difficulty_normal.js"
+          drops:
+            - "mm:NormalBossSword"
+            - "ot:example_sword"
+            - "ot:normal_crystal:3"
+
+        hard:
+          enabled: true
+          display-name: "&c困难"
+          slot: 16
+          material: RED_DYE
+          selected-material: RED_CONCRETE
+          name: "&c困难难度"
+          lore:
+            - "&7更强怪物与更好奖励"
+            - "&e点击选择"
+          script: "difficulty_hard.js"
+          drops:
+            - "mm:HardBossSword"
+            - "ot:hard_crystal:5"
 
   items:
     back:
       enabled: true
-      slot: 18
+      slot: 45
       material: ARROW
       name: "&e返回副本列表"
     enter:
       enabled: true
-      slot: 26
+      slot: 53
       material: LIME_DYE
       name: "&a进入副本"
       lore:
+        - "&7难度: &f%difficulty_name%"
         - "&7点击传送至 &f%name%"
       command: "md start %id%"
 ```
 
-标题、展示物品、按钮名称、lore 和进入命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%` 和 `%player%`。进入命令由点击玩家执行，开头的 `/` 可写可不写。来自全部副本列表时使用 `detail-menu.items.enter.command`；来自独立菜单时使用对应 `buttons.<按钮ID>.command`。返回按钮会回到打开详情页之前的全部副本列表页或独立菜单。
+标题、展示物品、按钮名称、lore 和进入命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%`、`%difficulty_id%`、`%difficulty_name%` 和 `%player%`。进入命令由点击玩家执行，开头的 `/` 可写可不写。来自全部副本列表时使用 `detail-menu.items.enter.command`；来自独立菜单时使用对应 `buttons.<按钮ID>.command`。返回按钮会回到打开详情页之前的全部副本列表页或独立菜单。
+
+### 难度脚本
+
+每个副本在 `detail-menu.dungeons.<副本ID>.difficulties` 下配置难度。`default-difficulty` 指定首次打开时选中的难度；未填写或无效时使用第一个启用的难度。存在难度配置时，详情界面会自动使用 6 行，以保证两整行掉落区可用。
+
+`script` 相对于该副本的 `scripts/` 目录。例如 `test_dungeon` 的 `difficulty_hard.js` 应放在：
+
+```text
+plugins/MayDungeon/dungeons/test_dungeon/scripts/difficulty_hard.js
+```
+
+难度脚本在副本正式启动时、通用 `on_start.js` 之前执行，可以使用正常的副本脚本 API，并通过 `event` 获取难度：
+
+```javascript
+// difficulty_hard.js
+print("当前难度: " + event.difficultyName);
+dungeon.setData("monster_health_multiplier", 2.0);
+dungeon.setData("reward_multiplier", 1.5);
+```
+
+插件会同时写入 `_difficulty` 和 `_difficulty_name` 副本元数据。GUI 启动命令无需手动追加难度参数；插件会把选择结果安全地附加到现有 `/md start` 参数中。也可以在命令文字中使用 `%difficulty_id%`。
+
+### 掉落预览
+
+`drops` 会直接生成 MythicMobs 或 Overture 的真实物品并放进预览槽，不会替换成普通材质：
+
+| 格式 | 说明 |
+|------|------|
+| `mm:<物品ID>` | MythicMobs 物品，`mythic:` 和 `mythicmobs:` 也可用 |
+| `ot:<物品ID>` | Overture 物品，`overture:` 也可用 |
+| `ot:<物品ID>:<数量>` | 指定预览堆叠数量，MythicMobs 同样支持 |
+
+无效或不存在的物品会被跳过，并在控制台中记录一次警告。最多展示 `drop-slots` 可容纳的数量；某个难度也可以单独配置自己的 `drop-slots`。使用 MM 物品需要安装 MythicMobs，使用 OT 物品需要安装 Overture。
+
+如果多个副本使用完全相同的难度，可以将 `difficulties` 和 `default-difficulty` 直接放在 `detail-menu` 下作为共享配置；`dungeons.<副本ID>` 的单独配置优先。
 
 关闭 `detail-menu.enabled` 后，全部副本列表和独立菜单都会恢复为点击副本直接执行进入命令。
 
@@ -187,4 +265,4 @@ items:
 - `close-on-click` 在 `detail-menu.enabled: false` 的直接执行模式下控制执行命令前是否关闭菜单，也可在某个按钮内单独配置。
 - 菜单 ID 仅使用小写字母、数字、下划线和连字符，例如 `daily_dungeons`。
 
-独立菜单的标题、物品名称、lore 和命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%` 和 `%player%`。修改或新增菜单后执行 `/md admin reload` 生效。
+独立菜单的标题、物品名称、lore 和命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%`、`%difficulty_id%`、`%difficulty_name%` 和 `%player%`。修改或新增菜单后执行 `/md admin reload` 生效。
