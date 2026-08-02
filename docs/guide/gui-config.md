@@ -175,6 +175,8 @@ detail-menu:
 
 每个副本在 `detail-menu.dungeons.<副本ID>.difficulties` 下配置难度。`default-difficulty` 指定首次打开时选中的难度；未填写或无效时使用第一个启用的难度。存在难度配置时，详情界面会自动使用 6 行，以保证两整行掉落区可用。
 
+插件内置“普通”和“困难”两档共享默认按钮。即使服务器保留的是旧版 `dungeon-selector.yml`，升级并重启或执行 `/md admin reload` 后也会直接显示 6 行新版界面；内置档位的脚本和掉落列表为空，不会凭空执行脚本或伪造奖励。需要实际难度逻辑和掉落预览时，按上方示例在 `dungeons.<副本ID>` 中覆盖配置。
+
 `script` 相对于该副本的 `scripts/` 目录。例如 `test_dungeon` 的 `difficulty_hard.js` 应放在：
 
 ```text
