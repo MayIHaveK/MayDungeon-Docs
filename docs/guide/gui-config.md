@@ -177,7 +177,7 @@ detail-menu:
 
 插件内置“普通”和“困难”两档共享默认按钮。即使服务器保留的是旧版 `dungeon-selector.yml`，升级并重启或执行 `/md admin reload` 后也会把缺失的难度配置合并到运行时配置，并直接显示 6 行新版界面；原文件中已经填写的行数和按钮位置不会被覆盖。内置档位的脚本和掉落列表为空，不会凭空执行脚本或伪造奖励。需要实际难度逻辑和掉落预览时，按上方示例在 `dungeons.<副本ID>` 中覆盖配置。
 
-重载后控制台应出现 `[GUI] detail-schema=2, difficulties=2`（数字会随启用的共享难度数量变化）。如果没有 `detail-schema=2`，说明服务器没有加载带新版详情界面的 JAR，应检查实际替换的文件和 `plugins` 目录中是否存在重复的 MayDungeon JAR。
+重载后控制台应出现 `[GUI] detail-schema=3, difficulties=2, custom-details=1`。`difficulties` 会随启用的共享难度数量变化，`custom-details` 表示成功读取到 `buttons.<按钮ID>.detail` 的按钮数量。如果没有 `detail-schema=3`，说明服务器没有加载带新版详情界面的 JAR，应检查实际替换的文件和 `plugins` 目录中是否存在重复的 MayDungeon JAR。
 
 `script` 相对于该副本的 `scripts/` 目录。例如 `test_dungeon` 的 `difficulty_hard.js` 应放在：
 
@@ -206,7 +206,7 @@ dungeon.setData("reward_multiplier", 1.5);
 | `ot:<物品ID>` | Overture 物品，`overture:` 也可用 |
 | `ot:<物品ID>:<数量>` | 指定预览堆叠数量，MythicMobs 同样支持 |
 
-无效或不存在的物品会被跳过，并在控制台中记录一次警告。最多展示 `drop-slots` 可容纳的数量；某个难度也可以单独配置自己的 `drop-slots`。使用 MM 物品需要安装 MythicMobs，使用 OT 物品需要安装 Overture。
+无效或不存在的物品会被跳过，并在控制台中记录一次警告。最多展示 `drop-slots` 可容纳的数量；某个难度也可以单独配置自己的 `drop-slots`。使用 MM 物品需要安装 MythicMobs，使用 OT 物品需要安装 Overture。当当前难度没有可展示物品时，掉落区首格显示“暂无掉落预览”，该物品可通过 `detail-menu.items.empty-drops` 修改或关闭。
 
 如果多个副本使用完全相同的难度，可以将 `difficulties` 和 `default-difficulty` 直接放在 `detail-menu` 下作为共享配置；`dungeons.<副本ID>` 的单独配置优先。
 
@@ -242,6 +242,37 @@ buttons:
       - "&7难度: &f%difficulty%"
       - "&a左键查看副本详情"
     command: "md start %id%"
+    detail:
+      default-difficulty: normal
+      difficulties:
+        normal:
+          enabled: true
+          display-name: "&a普通"
+          slot: 10
+          material: LIME_DYE
+          selected-material: LIME_CONCRETE
+          name: "&a普通难度"
+          lore:
+            - "&7适合常规队伍"
+            - "&e点击选择"
+          script: "difficulty_normal.js"
+          drops:
+            - "mm:NormalBossSword"
+            - "ot:normal_crystal:3"
+        hard:
+          enabled: true
+          display-name: "&c困难"
+          slot: 16
+          material: RED_DYE
+          selected-material: RED_CONCRETE
+          name: "&c困难难度"
+          lore:
+            - "&7更高挑战"
+            - "&e点击选择"
+          script: "difficulty_hard.js"
+          drops:
+            - "mm:HardBossSword"
+            - "ot:hard_crystal:5"
 
   hard:
     dungeon: hard_dungeon
@@ -264,9 +295,12 @@ items:
 - `buttons` 中只会显示插件当前已加载的副本，`dungeon` 填写副本 ID。
 - `slot` 从 `0` 开始，必须小于 `rows × 9`；多个按钮不要使用同一槽位。
 - `material`、`name` 和 `lore` 均可为每个副本按钮单独设置。
+- `buttons.<按钮ID>.detail` 为该按钮打开的二级 GUI 单独配置难度、JS 脚本和 MM/OT 掉落物；存在该节点时优先于 `dungeon-selector.yml` 的共享难度。
 - `command` 在玩家进入详情页后点击“进入副本”时以该玩家身份执行，开头的 `/` 可写可不写；默认值为 `md start %id%`。
 - `permission` 留空时不限制打开菜单；填写后，玩家必须拥有该权限。
 - `close-on-click` 在 `detail-menu.enabled: false` 的直接执行模式下控制执行命令前是否关闭菜单，也可在某个按钮内单独配置。
 - 菜单 ID 仅使用小写字母、数字、下划线和连字符，例如 `daily_dungeons`。
 
 独立菜单的标题、物品名称、lore 和命令支持 `%id%`、`%name%`、`%description%`、`%min_players%`、`%max_players%`、`%difficulty%`、`%difficulty_id%`、`%difficulty_name%` 和 `%player%`。修改或新增菜单后执行 `/md admin reload` 生效。
+
+插件会在 `plugins/MayDungeon/guis/dungeon-menus/difficulty-example.yml` 释放一份禁用的完整示例。该文件不会出现在 `/md gui` 菜单列表中，可以复制其中的 `detail` 到现有菜单按钮并替换副本、脚本及物品 ID。
