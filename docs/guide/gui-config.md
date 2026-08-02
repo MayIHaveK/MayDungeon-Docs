@@ -175,7 +175,9 @@ detail-menu:
 
 每个副本在 `detail-menu.dungeons.<副本ID>.difficulties` 下配置难度。`default-difficulty` 指定首次打开时选中的难度；未填写或无效时使用第一个启用的难度。存在难度配置时，详情界面会自动使用 6 行，以保证两整行掉落区可用。
 
-插件内置“普通”和“困难”两档共享默认按钮。即使服务器保留的是旧版 `dungeon-selector.yml`，升级并重启或执行 `/md admin reload` 后也会直接显示 6 行新版界面；内置档位的脚本和掉落列表为空，不会凭空执行脚本或伪造奖励。需要实际难度逻辑和掉落预览时，按上方示例在 `dungeons.<副本ID>` 中覆盖配置。
+插件内置“普通”和“困难”两档共享默认按钮。即使服务器保留的是旧版 `dungeon-selector.yml`，升级并重启或执行 `/md admin reload` 后也会把缺失的难度配置合并到运行时配置，并直接显示 6 行新版界面；原文件中已经填写的行数和按钮位置不会被覆盖。内置档位的脚本和掉落列表为空，不会凭空执行脚本或伪造奖励。需要实际难度逻辑和掉落预览时，按上方示例在 `dungeons.<副本ID>` 中覆盖配置。
+
+重载后控制台应出现 `[GUI] detail-schema=2, difficulties=2`（数字会随启用的共享难度数量变化）。如果没有 `detail-schema=2`，说明服务器没有加载带新版详情界面的 JAR，应检查实际替换的文件和 `plugins` 目录中是否存在重复的 MayDungeon JAR。
 
 `script` 相对于该副本的 `scripts/` 目录。例如 `test_dungeon` 的 `difficulty_hard.js` 应放在：
 
