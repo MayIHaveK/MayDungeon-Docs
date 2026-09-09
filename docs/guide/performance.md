@@ -20,7 +20,7 @@
 world:
   max-concurrent-copies: 2
   create-interval: 1000
-  copy-mode: "link"
+  copy-mode: "copy"
   idle-chunk-unload: true
   preload-chunk-radius: 3
   preload-chunks-per-tick: 4
@@ -31,28 +31,38 @@ world:
 
 dungeon:
   queue:
-    enabled: false
-    max-concurrent: 3
+    enabled: true
+    max-concurrent: 1
 ```
+
+上述示例使用 `copy` 隔离模板文件；插件默认值仍为 `link`。每个副本可覆盖复制方式和生命周期，CustomNPCs 等复杂模组场景建议使用 `copy`。当前 `link` 只共享地形文件，仍要求作者防止共享文件写盘。详见 [世界管理](./world-management.md#customnpcs-与实体残留)。
 
 ### 地图加载慢
 
-- 优先使用 `copy-mode: "link"`。文件系统不支持硬链接时插件会自动回退为完整复制。
+- `copy-mode: "copy"` 会增加复制耗时和磁盘占用，但能隔离模板文件。只有确认运行环境不会写入共享存档文件时，才考虑 `link`；文件系统不支持硬链接时会自动回退为完整复制。使用 CustomNPCs 等模组动态生成实体的副本应保持 `copy`。
 - 精简模板世界，只保留副本需要的区块；删除 `playerdata`、`stats` 等无关数据。
 - `preload-chunk-radius` 越大，首次进入前加载的区块越多。小地图通常使用 `2-3` 即可。
 - 适当提高 `preload-chunks-per-tick` 可缩短等待，但会增加单 tick 压力；卡顿时应降低。
-- 玩家频繁重复进入同一地图时，再考虑为该副本启用世界池。
+- 地图变化能由作者完整还原时，可以使用 `reusable`，成功还原后复用世界，省去连续刷本的重复复制和加载；不能完整还原的副本保持 `disposable`。
 
 ### 运行时内存偏高
 
-- 将 `instance-view-distance` 设为 `4-6`；设为 `0` 表示跟随服务端默认视距。
+- 将 `instance-view-distance` 设为 `4-6`；设为 `0` 表示跟随服务端默认视距。部分混合端不支持单世界设置接口，配置可能不生效，需以实际加载区块数验证。
 - 保持 `idle-chunk-unload: true`。
 - 保持 `void-outside-template: true`，避免玩家越界时生成大量新地形。确实依赖模板外原版地形的地图才关闭它。
-- 用 `/md admin instances` 确认已经结束的实例不再出现。若控制台持续提示实例世界无法回收，请保存日志并重启服务器，不要手动删除仍处于加载状态的世界目录。
+- 用 `/md admin worlds` 查看空闲世界、加载区块数和回收倒计时；`reusable` 结束后暂时保留空闲世界是正常行为。若持续停在回收失败状态，请保存日志，不要手动删除仍处于加载状态的目录。
+
+## 按需常驻与多开
+
+每个副本设置 `world.mode: reusable`、`world.max-instances: 3`，表示最多三个独立槽位，不会自动创建三个世界。只有一队反复挑战时，复用一个即可；出现并发才增加。`world.reuse.max-idle` 限制空闲保留数，`idle-timeout-minutes` 控制每个世界还原完成后的闲置回收时间。
+
+常驻可以减少重复创建开销，但空闲世界仍可能占用内存或有模组 tick。建议先保留一个空闲世界，并设置全局 `world.max-idle-worlds`；还可以用全局 `world.max-total-instances` 限制总量。超过槽位上限的队伍排队，不通过增加复制线程强行开更多世界。
+
+两个生命周期都允许 `link` / `copy`。只限制一个实例、自行生成删除实体的副本也可选 `link`，但必须同时避免地形文件写盘；单实例和自动删除 NPC 都不是文件隔离。还原脚本需覆盖未加载实体、地图变化和外部任务，不能仅写 `return true` 当作自动还原。见 [还原脚本](./world-management.md#还原脚本)。
 
 ## 世界池
 
-世界池适合固定热门副本，可减少玩家点击开始后的等待时间，但会预先占用磁盘和内存：
+旧文件预复制池可以把地图复制提前到后台，但入场时仍需加载世界。它只对 `disposable` 且 `max-instances: 0` 生效，常驻和有限槽位模式跳过预热：
 
 ```yaml
 world:
@@ -61,7 +71,6 @@ world:
     dungeons:
       test_dungeon:
         cache-size: 2
-        instance-keep: false
     refill-interval: 30
 ```
 

@@ -8,7 +8,7 @@ MayDungeon 使用事件驱动模型，副本在关键节点自动执行对应的
 
 | 脚本文件 | 触发时机 | trigger 对象 |
 |----------|----------|--------------|
-| `on_init.js` | 世界加载完成，玩家传入前 | null |
+| `on_init.js` | 每局取得世界后、玩家传入前，复用世界也执行 | null |
 | `on_start.js` | 玩家已传入副本，副本正式开始 | null |
 | `on_player_join.js` | 玩家首次加入副本 | 加入的玩家 |
 | `on_player_rejoin.js` | 玩家断线重连回副本 | 重连的玩家 |
@@ -26,6 +26,9 @@ MayDungeon 使用事件驱动模型，副本在关键节点自动执行对应的
 | `on_complete.js` | 副本判定为成功 | null |
 | `on_fail.js` | 副本判定为失败 | null |
 | `on_end.js` | 副本结束（统一收尾，无论成功失败） | null |
+| `on_reset.js` | `reusable` 世界准备复用，玩家撤离和基础清理后；必须同步还原并返回布尔 `true` | null |
+
+`on_reset.js` 固定放在副本根 `scripts/` 中，所有难度共用。通过 `event.get("world")` 获取要还原的世界，`event.get("instanceId")` 获取旧会话 ID。缺失、异常或未返回布尔 `true` 时销毁世界。它不自动还原任意地图和模组数据，完整约定见 [世界管理](./world-management.md#还原脚本)。
 
 ## trigger 对象
 

@@ -56,22 +56,35 @@ world:
   preload-chunks-per-tick: 4
   # 副本世界视距；0 表示跟随服务端默认值
   instance-view-distance: 6
-  # link 优先使用硬链接，失败时自动回退完整复制；copy 始终完整复制
+  # 以下五个选项可在每个副本 dungeon.yml 的 world 节逐项覆盖。
+  # link 只共享地形文件，实体/POI 独立复制；不支持时回退复制；copy 隔离全部文件。
+  # reusable 也允许 link；作者需管理实体和地图还原，单实例也不等于防止共享地形写盘。
   copy-mode: "link"
+  mode: "disposable"         # reusable 按需创建，不按上限预先建满
+  max-instances: 0           # 每种副本的世界槽位上限，0 不限
+  reuse:
+    idle-timeout-minutes: 10 # 每个世界还原完成后独立计时，超时销毁
+    max-idle: 1              # 空闲保留上限，不是保留底数；0 不保留
+  # 以下两项只在全局生效，不被副本覆盖。
+  max-total-instances: 0     # 全服已分配世界总上限，0 不限
+  max-idle-worlds: 8         # 全服空闲常驻世界保留上限，0 不保留
   # 模板已有范围外生成虚空，避免越界生成原版地形
   void-outside-template: true
 
-  # 世界池设置（可选性能优化）
+  # 旧文件预复制池：仅对 disposable 且 max-instances=0 生效，不控制常驻数量。
   pool:
     enabled: false
     dungeons:
       # example_dungeon:
       #   cache-size: 3
-      #   instance-keep: false
     refill-interval: 30
 ```
 
 详细说明请参考 [世界管理](./world-management.md) 和 [性能优化](./performance.md)。
+
+::: warning CustomNPCs 与实体残留
+CustomNPCs 等复杂模组场景建议使用 `copy`，可以在该副本 `dungeon.yml` 覆盖全局默认值。旧版本 `link` 共享实体存档，可能让 NPC 数据写入模板；当前版本只链接地形文件，仍需防止地形写盘。若模板已经混入 NPC，还需恢复或清理模板。`reusable` 需要 `scripts/on_reset.js` 同步完成还原并返回布尔 `true`，否则销毁世界。详见 [世界管理](./world-management.md#每副本覆盖与常驻复用)。
+:::
 
 ::: warning
 若副本地图依赖模板范围外继续生成原版地形，请将 `void-outside-template` 设为 `false`。`instances/` 是临时目录，请勿在其中手工建图或存放文件。
