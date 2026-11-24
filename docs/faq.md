@@ -70,12 +70,12 @@ conditions:
 
 ```yaml
 gameplay:
-  dragonminez:
+  dbz:
     debug: true
     probe-interval-ticks: 20
 ```
 
-> 兼容提示：旧版 `dungeon.dbz.*` 键名仍受支持，v2 配置推荐统一使用 `gameplay.dragonminez.*`。
+> 兼容提示：旧版 `dungeon.dbz.*` 键名仍受支持，v2 配置推荐统一使用 `gameplay.dbz.*`。
 
 重启后复现一次，保存控制台中的 `[DBZ]`、`[DBZ-PROBE]` 和 `[DBZ-DEBUG]` 日志，然后将 `debug` 改回 `false`。诊断模式只读取状态，但日志量很大，不要长期开启。
 
@@ -100,7 +100,7 @@ world:
 
 ### 常驻副本最多三个世界，会一直占用三个吗？
 
-不会。`world.limits.per-dungeon: 3`（旧键 `world.max-instances`）是上限，世界按挑战需求创建；一队反复挑战可以一直复用同一个。还原完成后每个世界独立计时，超过 `world.reuse.idle-timeout-minutes` 自动销毁；超出 `world.reuse.max-idle` 的空闲世界提前回收。没有最低常驻数量。使用 `/md admin worlds` 可以看到模式、还原结果和回收倒计时。
+不会。`world.slots.max-active: 3`（旧键 `world.max-instances`）是上限，世界按挑战需求创建；一队反复挑战可以一直复用同一个。还原完成后每个世界独立计时，超过 `world.slots.idle-timeout-minutes` 自动销毁；超出 `world.slots.idle-keep` 的空闲世界提前回收。没有最低常驻数量。使用 `/md admin worlds` 可以看到模式、还原结果和回收倒计时。
 
 ### reusable 可以使用 link 吗？
 
@@ -111,20 +111,20 @@ world:
 ### 如何开启真正的秒加载（< 15ms 瞬进）并验证是否生效？
 
 1. **零预加载阻塞默认开启（v2 默认）**：`world.creator: "auto"`、`world.preload.mode: "none"`（完全跳过区块预加载阻塞，交由玩家传送时按需加载）与空队列 0ms 直通开箱即用；如确需预载，可按需切回 `spawn` 或 `radius`。
-2. **开启 L1 内存热备**：在 `config.yml` 的 `world.slots.standby` 下为热门副本配置槽位（如 `test_dungeon: 1`），或在对应副本 `dungeon.yml` 设置 `world.standby: 1`（兼容旧键 `world.warm-standby`）。
+2. **开启 L1 内存热备**：在 `config.yml` 的 `world.limits.standby-dungeons` 下为热门副本配置槽位（如 `test_dungeon: 1`），或在对应副本 `dungeon.yml` 设置 `world.slots.standby: 1`（兼容旧键 `world.warm-standby`）。
 3. **验证方式**：开服 10–30 秒后执行 `/md admin worlds`，看到 `[L1热备就绪]` 即已预热完成；进本后再看 `/md admin worlds` 与 `/md admin engine status` 的 `P50 / P95 / 最近耗时(L1热备) / 瞬进率`。详见 [性能调优 — 副本秒进调优](/guide/performance)。
 
 ### 配了热备但控制台一直提示"堆内存守卫暂停"或 `/md admin worlds` 里没有出现热备世界？
 
 依次检查：
-1. `world.slots.standby-enabled` 是否为 `true`，且 `world.slots.standby` 中的副本 ID 与 `dungeons/` 目录名完全一致（或已在该副本 `dungeon.yml` 配置 `world.standby: 1`）。
-2. **内存守卫与启动内存设置**：v2 内存守卫默认基于 **JVM 老年代（Old Gen）使用率** 判断，而不是被年轻代波动误伤；如果仍然持续触发暂停，通常是服务端 `-Xmx` 分配偏小（例如混合端或大型模组服只给了 2G），建议适当提高开服 `-Xmx` 或调低 `world.slots.min-free-memory-percent`（测试服可设为 `15`）。
-3. 是否达到 `world.slots.max-standby-total`、`world.limits.per-dungeon` 或 `world.limits.total` 上限，或模板地图目录不存在。
-4. 插件启动后约 6 秒开始首次巡检，每次巡检只预热 1 个世界，多副本按 `world.slots.refill-interval-seconds` 依次补齐。
+1. `world.limits.standby-enabled` 是否为 `true`，且 `world.limits.standby-dungeons` 中的副本 ID 与 `dungeons/` 目录名完全一致（或已在该副本 `dungeon.yml` 配置 `world.slots.standby: 1`）。
+2. **内存守卫与启动内存设置**：v2 内存守卫默认基于 **JVM 老年代（Old Gen）使用率** 判断，而不是被年轻代波动误伤；如果仍然持续触发暂停，通常是服务端 `-Xmx` 分配偏小（例如混合端或大型模组服只给了 2G），建议适当提高开服 `-Xmx` 或调低 `world.limits.min-free-oldgen-percent`（测试服可设为 `15`）。
+3. 是否达到 `world.limits.max-total-standby`、`world.slots.max-active` 或 `world.limits.max-total-worlds` 上限，或模板地图目录不存在。
+4. 插件启动后约 6 秒开始首次巡检，每次巡检只预热 1 个世界，多副本按 `world.limits.standby-refill-seconds` 依次补齐。
 
 ### 同时运行多个副本卡顿
 
-优先保持 `world.preload.mode: "none"` 避免区块预加载抢占主线程；其次降低 `world.limits.max-concurrent-copies`。使用 CustomNPCs 等模组动态生成实体时保持 `world.isolation: "copy"`，不要为加快复制而切回 `link`。详见 [性能调优](/guide/performance)。
+优先保持 `world.preload.mode: "none"` 避免区块预加载抢占主线程；其次降低 `world.max-concurrent-copies`。使用 CustomNPCs 等模组动态生成实体时保持 `world.isolation: "copy"`，不要为加快复制而切回 `link`。详见 [性能调优](/guide/performance)。
 
 ### 脚本执行很慢
 
