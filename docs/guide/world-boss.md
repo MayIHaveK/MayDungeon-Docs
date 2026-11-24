@@ -74,9 +74,15 @@ spawn-point: "8.5, 8.0, 8.5"
 
 ## 调度器全局配置
 
-调度器扫描频率可在 `config.yml` 中调整：
+调度器扫描频率与开场前自动热备可在 `config.yml` 中调整：
 
 ```yaml
+world:
+  warm-standby:
+    enabled: true
+    # 定时世界 Boss 开场前多少秒自动预热 1 个 L1 热备世界（0 = 关闭）
+    world-boss-prewarm-seconds: 30
+
 dungeon:
   world-boss:
     scheduler:
@@ -85,6 +91,10 @@ dungeon:
       # 开放时间扫描间隔（秒）；间隔越短，到点响应越快，建议 10-60
       check-interval-seconds: 60
 ```
+
+::: tip 开场前 30 秒自动热备
+当 `world.warm-standby.enabled: true` 且 `world.warm-standby.max-total` 留有余量时，调度器会在定时世界 Boss 开放前 `world-boss-prewarm-seconds`（默认 30 秒）自动在后台预热好 1 个 L1 热备世界，到点瞬间直接启用并广播，避免全服公告与世界构造抢占同一 tick。详见 [性能调优 — 秒加载与两阶段预加载](./performance.md#秒加载与两阶段预加载)。
+:::
 
 ## 生命周期
 

@@ -2,9 +2,12 @@
 
 ## 环境要求
 
-- Spigot / Paper 1.20.x - 1.21.x
-- Java 21+
-- NashornJS 插件（提供 JavaScript 引擎）
+- Spigot / Paper 1.20.x - 1.21.x（含 Arclight、Mohist 等 Forge 混合端）
+- Java 17+（若启用 **GraalJS** 推荐 **Java 21+**，使用 **GraalVM JDK 21** 可自动获得 Truffle JIT 编译加速）
+- JavaScript 引擎插件（三选一即可，默认 `script.engine: "auto"` 按优先级自动识别）：
+  1. **`MayJS-GraalJS.jar`（推荐，JDK 21+）**：提供 GraalJS 24.2.2（ES2023+）与死循环语句/超时熔断；**支持脱离 `MayJS` 独立安装运行**，只想用 MayDungeon 时无需再装 MayJS。
+  2. **`MayJS 3.0+`**：若服内已使用 MayJS 3.0 平台，可直接通过桥接复用其活跃引擎。
+  3. **`NashornJs.jar`**：兼容 JDK 17–21 的传统引擎回退选项。
 - MythicMobs 5.x（怪物系统）
 
 ::: tip 版本与混合端兼容
@@ -25,7 +28,7 @@
 
 1. 将以下插件 JAR 放入 `plugins/` 目录：
    - 你获得的 `MayDungeon` 发布版 JAR
-   - `NashornJs.jar`
+   - `MayJS-GraalJS.jar`（推荐，JDK 21+，可不装 `MayJS` 独立运行）或 `NashornJs.jar`
    - `MythicMobs.jar`
 
 2. 启动服务器
@@ -45,7 +48,8 @@
 
 ## 验证安装
 
-执行 `/md list`，如果显示 `test_dungeon` 则安装成功。
+1. 执行 `/md list`，如果显示 `test_dungeon` 则基础安装成功。
+2. 执行 `/md admin engine`，可一并确认当前激活的脚本引擎、Truffle JIT 状态，以及世界预加载入场通道（`Paper急迫异步` / `非阻塞票据` / `核心半径`）。
 
 ::: tip
 如果看到"地图不存在"的警告，这是正常的——放入地图后 reload 即可。插件不会因为缺少地图而崩溃。

@@ -1,6 +1,6 @@
 # 世界管理
 
-MayDungeon 从 `plugins/MayDungeon/maps/<地图名>/` 读取模板。默认 `disposable` 每局创建、结束后销毁；`reusable` 按需创建独立世界，还原成功后供下一队复用，闲置超时自动销毁。复制方式和生命周期可分别配置，CustomNPCs 等复杂模组场景建议使用 `copy`。
+MayDungeon 从 `plugins/MayDungeon/maps/<地图名>/` 读取模板。默认 `disposable` 每局创建、结束后销毁；`reusable` 按需创建独立世界，还原成功后供下一队复用，闲置超时自动销毁。配合 **两阶段核心预加载** 与 **L1 内存热备池 (`warm-standby`)**，热门副本可实现 `< 15ms` 同 Tick 瞬传。复制方式和生命周期可分别配置，CustomNPCs 等复杂模组场景建议使用 `copy`。
 
 ## 准备模板地图
 
@@ -20,6 +20,10 @@ world:
   instance-dir: "instances"
   max-concurrent-copies: 2
   create-interval: 1000
+  adaptive-create-interval: true
+  adaptive-min-interval-ms: 150
+  creator: "auto"
+  max-pending-creates: 32
   copy-exclude:
     - "session.lock"
     - "uid.dat"
@@ -28,24 +32,56 @@ world:
     - "stats"
   idle-chunk-unload: true
   preload-chunk-radius: 3
+  preload-core-radius: 1
   preload-chunks-per-tick: 4
+  preload-tickets-per-tick: 64
+  preload-budget-ms: 3
+  preload-timeout-seconds: 60
   instance-view-distance: 6
   copy-mode: "link"
   void-outside-template: true
+  warm-standby:
+    enabled: true
+    max-total: 4
+    min-free-memory-percent: 25
+    refill-interval-seconds: 15
+    world-boss-prewarm-seconds: 30
+    dungeons: {}
 ```
 
 | 配置 | 使用建议 |
-|------|----------|
+| --- | --- |
 | `instance-dir` | 保持默认；该目录只存放临时实例 |
 | `max-concurrent-copies` | 同时执行文件复制的任务数量，磁盘压力高时降低 |
-| `create-interval` | 上次世界激活结束到下次激活的最小间隔，单位毫秒 |
-| `preload-chunk-radius` | 进入前预加载出生点周围多少圈区块 |
-| `preload-chunks-per-tick` | 每 tick 的预加载预算；越高完成越快，瞬时压力也越大 |
+| `create-interval` | 世界创建的最大节流间隔（毫秒）；开启自适应后仅在主线程繁忙时回退到此上限 |
+| `adaptive-create-interval` | 默认 `true`；热态 NMS 创建很快时自动压缩突发间隔，卡顿时自动拉大保护 TPS |
+| `adaptive-min-interval-ms` | 自适应模式下的最短创建间隔（默认 `150` 毫秒） |
+| `creator` | 默认 `auto`（优先使用当前版本 NMS / Mohist 专用创建器，不支持时自动回退）；设为 `bukkit` 可强制通用路径 |
+| `max-pending-creates` | 文件准备/等待加载的请求总数上限（默认 `32`），普通副本、世界 Boss 与编辑器共享 |
+| `preload-chunk-radius` | 出生点周围区块预加载总半径（默认 `3`，外围区块在传送后后台异步补载） |
+| `preload-core-radius` | **阻塞入场的出生核心半径**（默认 `1`，即 3×3 共 9 块，比 7×7 减少 82% 阻塞等待；外环不阻塞入场） |
+| `preload-chunks-per-tick` | 全服所有副本共享的每 tick 预加载步进预算（默认 `4`） |
+| `preload-tickets-per-tick` | NMS 非阻塞票据可用时，单个副本每 tick 最多登记的区块票据数（默认 `64`，一次发完不卡主线程） |
+| `preload-budget-ms` | 每 tick 预加载时间预算（默认 `3` 毫秒） |
+| `preload-timeout-seconds` | 预加载超时上限（默认 `60` 秒）；超时中止入场并退款清理 |
 | `instance-view-distance` | 副本视距；`0` 跟随服务端默认值 |
 | `copy-mode` | 默认 `link` 仅共享地形文件，实体、POI 等独立复制；不支持硬链接时回退为复制。`copy` 完整复制，复杂模组场景建议选此项 |
-| `void-outside-template` | `true` 时模板已有区块之外为虚空 |
+| `void-outside-template` | `true` 时模板已有区块之外为虚空，避免触发原版地形现场生成 |
+| `warm-standby.*` | L1 内存热备池配置；为热门副本提前构建世界并常驻核心 3×3 区块，实现 `< 15ms` 瞬传，详见下方与 [性能调优](./performance.md#秒加载与两阶段预加载) |
 
 修改这些选项后建议重启服务器。若地图需要在模板边界外生成原版地形，必须关闭 `void-outside-template`。
+
+## L1 内存热备、常驻复用与文件池的区别
+
+三种性能优化定位不同，可按需搭配：
+
+| 机制 | 配置入口 | 事前预热？ | 需要 `on_reset.js`？ | 命中耗时 | 适用场景 |
+| --- | --- | :---: | :---: | :---: | --- |
+| **L1 内存热备** | `world.warm-standby` / `dungeon.yml` 的 `world.warm-standby` | **是**（提前建好空白世界 + 常驻 3×3 核心块） | **否**（`disposable` 直接可用） | **< 15 ms** | 热门副本首局即秒进、世界 Boss 开场前 30s 自动预热 |
+| **常驻复用 (`reusable`)** | `world.mode: "reusable"` | 否（打完一局还原后留存 `IDLE` 供下一队复用） | **是**（必须同步还原并 `return true`） | **< 15 ms**（命中 `IDLE`） | 连续高频刷本且作者能完整还原地图 |
+| **旧文件预复制池 (`pool`)** | `world.pool` | 是（仅预复制目录，不加载世界） | 否（仅 `disposable` 且 `max-instances=0`） | 120 – 350 ms | 不想占任何常驻世界内存的中低频大地图 |
+
+详细的 L1 热备参数调优与内存守卫说明见 [性能调优 — 秒加载与两阶段预加载](./performance.md#秒加载与两阶段预加载)。
 
 ## 每副本覆盖与常驻复用
 
@@ -56,6 +92,7 @@ world:
   copy-mode: "copy"       # copy 或 link；reusable 也允许使用 link
   mode: "reusable"        # disposable 每局销毁；reusable 还原后复用
   max-instances: 3        # 最多占用 3 个独立世界，不是预创建 3 个
+  warm-standby: 1         # 可选：为该副本保留 1 个 L1 热备槽位（默认 0，>0 时覆盖主配置）
   reuse:
     idle-timeout-minutes: 10  # 每个世界还原完成后独立计时，超时自动销毁
     max-idle: 1               # 最多保留 1 个空闲世界，不是最低保留数量
@@ -66,10 +103,11 @@ world:
 | `copy-mode` | `link` | 复制方式；两个生命周期模式都允许 `copy` 和 `link` |
 | `mode` | `disposable` | 未配置的旧副本保持每局销毁 |
 | `max-instances` | `0` | `0` 不限，`1–256` 限制该副本已分配的世界槽位 |
+| `warm-standby` | `0` | `0–8`；单副本 L1 热备槽位数，大于 0 时优先于主配置 `world.warm-standby.dungeons.<副本ID>`，并受 `max-instances` 与全局 `warm-standby.max-total` 约束 |
 | `reuse.idle-timeout-minutes` | `10` | `1–10080` 分钟；还原完成后开始计时 |
 | `reuse.max-idle` | `1` | `0–256`；`0` 不保留空闲世界 |
 
-比如上限为 3，一直只有一队挑战时，只会创建并复用一个世界；出现并发才按需增加。三个槽位都被占用时，第四队排队，等待期间不扣入场费用。复制、加载、运行、还原、空闲和等待回收的世界都占槽位；删除完成才释放名额。
+比如上限为 3，一直只有一队挑战时，只会创建并复用一个世界；出现并发才按需增加。三个槽位都被占用时，第四队排队，等待期间不扣入场费用。复制、加载、热备、运行、还原、空闲和等待回收的世界都占槽位；删除完成才释放名额。
 
 每个世界独立经历：`创建 → 占用 → 还原中 → 空闲可复用 → 再次占用或超时销毁`。优先复用最近使用过的空闲世界，较久未使用的多余世界自然超时。超过 `max-idle` 的空闲世界会提前回收。玩家临时离线、等待重连或世界 Boss 活动暂时没人，不会启动这个闲置计时。
 
@@ -104,7 +142,7 @@ return false;
 
 ### 配置更新与重启
 
-`/md admin reload`、编辑器保存或导入模板会使旧缓存失效：空闲世界回收，正在使用的世界结束后销毁，不再复用。不要直接覆盖正在使用的模板。服务器关闭后不保留常驻会话，重启清理残留，下次有人挑战时再按需创建。
+`/md admin reload`、编辑器保存或导入模板会使旧缓存失效：热备世界与空闲世界回收，正在使用的世界结束后销毁，不再复用。不要直接覆盖正在使用的模板。服务器关闭后不保留常驻会话，重启清理残留，下次有人挑战或后台巡检时再按配置创建。
 
 ## CustomNPCs 与实体残留
 
@@ -119,11 +157,11 @@ world:
 
 保存配置后重启服务器，再新开一局验证。完整复制会增加磁盘占用和复制耗时，但能隔离副本与模板文件。
 
-如果改为 `copy` 后仍有旧 NPC，请先备份并检查 `plugins/MayDungeon/maps/<地图名>/`：恢复干净模板，或通过编辑器删除误写的 NPC 后保存。修改复制方式不会自动清除模板中已有的实体。启用世界池时，也需要在模板修复后重新生成预缓存；不要在服务器运行时直接删除实例目录。
+如果改为 `copy` 后仍有旧 NPC，请先备份并检查 `plugins/MayDungeon/maps/<地图名>/`：恢复干净模板，或通过编辑器删除误写的 NPC 后保存。修改复制方式不会自动清除模板中已有的实体。启用世界池或热备时，也需要在模板修复后重载刷新缓存；不要在服务器运行时直接删除实例目录。
 
-## 世界池
+## 世界池（旧文件预复制池）
 
-这是旧的文件预复制池，仅对 `disposable` 且 `max-instances: 0` 的副本生效；它不是常驻复用池。`reusable` 及有限槽位模式跳过此预热，始终按需求创建，不会因为 `cache-size` 补满多个世界。
+这是旧的文件预复制池，仅对 `disposable` 且 `max-instances: 0` 的副本生效；它不是内存热备池或常驻复用池。需要真正毫秒级秒进时，建议改用 `world.warm-standby`。`reusable` 及有限槽位模式跳过此预热，始终按需求创建，不会因为 `cache-size` 补满多个世界。
 
 ```yaml
 world:
@@ -137,16 +175,18 @@ world:
 
 缓存会占用额外资源，建议从 `cache-size: 1` 开始。低频地图无需启用。
 
-### 查看世界状态
+### 查看世界状态与入场耗时
 
-执行 `/md admin worlds [副本ID|all] [页码]`，每页显示 6 个已分配世界，包括复制/加载中、使用中、还原中、空闲和等待回收的世界。需要 `maydungeon.command.admin.worlds` 权限（已包含在管理员权限中）。旧文件池尚未分配的预复制目录不在此列表中。
+执行 `/md admin worlds [副本ID|all] [页码]`，每页显示 6 个已分配世界，包括复制/加载中、`L1热备就绪`、已占用、还原中、空闲可复用和等待回收的世界。需要 `maydungeon.command.admin.worlds` 权限（已包含在管理员权限中）。旧文件池尚未分配的预复制目录不在此列表中。
 
-每个世界显示名称、生命周期模式、复制策略、使用次数、玩家数、加载区块数、会话状态、还原结果，以及闲置回收剩余秒数；使用中显示“未计时”。“不再复用”表示缓存失效或已经决定回收。复制策略 `link` 在文件系统不支持时会回退为复制，不保证所有地形文件都是硬链接。
+- 顶部自动展示累计入场统计：`总计`、`P50`、`P95` 与各路径命中数（`L1热备` / `复用` / `磁盘池` / `新建`）。
+- 每个世界显示名称、状态、生命周期模式、复制策略、使用次数、玩家数、加载区块数、会话状态、还原结果，以及闲置回收剩余秒数；使用中显示“未计时”。“不再复用”表示缓存失效或已经决定回收。复制策略 `link` 在文件系统不支持时会回退为复制，不保证所有地形文件都是硬链接。
 
 ## 日常检查
 
+- `/md admin engine`：查看脚本引擎、Truffle JIT 状态、预加载通道（Paper急迫异步 / 非阻塞票据 / 核心半径）与入场瞬进率。
 - `/md admin instances`：查看当前运行实例。
-- `/md admin worlds`：查看包括空闲常驻世界在内的状态；`/md admin worlds test_dungeon 1` 只看指定副本。
+- `/md admin worlds`：查看包括 L1 热备与空闲常驻世界在内的状态和入场 P50/P95；`/md admin worlds test_dungeon 1` 只看指定副本。
 - `/md admin tp <实例ID>`：进入实例检查。
 - `/md admin forceend <实例ID>`：结束异常实例。
 - 控制台持续报告世界无法卸载时，先移出其中玩家并正常重启服务器。

@@ -46,7 +46,8 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 | `/md admin reload` | 重载配置文件 |
 | `/md admin import <地图名>` | 导入地图 |
 | `/md admin instances` | 查看运行中的副本实例 |
-| `/md admin worlds [副本ID\|all] [页码]` | 每页 6 个世界：模式、复制策略、使用/还原状态、玩家/区块数、闲置回收倒计时；权限 `maydungeon.command.admin.worlds` |
+| `/md admin worlds [副本ID\|all] [页码]` | 每页 6 个世界：含 `L1热备就绪` / 空闲复用 / 运行状态、复制策略、玩家/区块数、闲置回收倒计时，及顶部入场 P50/P95 与各路径命中统计；权限 `maydungeon.command.admin.worlds` |
+| `/md admin engine` | 查看当前脚本引擎、Truffle JIT 状态、编译缓存命中率、预加载入场通道（Paper急迫异步/非阻塞票据/核心半径）与瞬进率；权限 `maydungeon.command.admin.engine` |
 | `/md admin tp <实例ID>` | 传送到指定副本实例 |
 | `/md admin kick <玩家>` | 将玩家踢出副本 |
 | `/md admin forceend <实例ID>` | 强制结束副本实例 |

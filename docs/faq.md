@@ -8,7 +8,11 @@
 
 ### 启动报 "JavaScript 引擎不可用"
 
-需要安装 NashornJS 插件。将 `NashornJs.jar` 放入 `plugins/` 目录。
+请安装以下任意一种脚本引擎插件（默认 `script.engine: "auto"` 会自动选择优先级最高者）：
+
+1. **`MayJS-GraalJS.jar`（推荐，JDK 21+）**：支持脱离 `MayJS` 独立安装运行，无需额外安装 `MayJS`；使用 GraalVM JDK 21 可启用 Truffle JIT。
+2. **`MayJS 3.0+`**：通过平台桥接复用 MayJS 的活跃引擎。
+3. **`NashornJs.jar`**：兼容 JDK 17–21 的传统引擎。
 
 ### 地图不存在的警告
 
@@ -95,6 +99,20 @@ world:
 可以，在该副本 `dungeon.yml` 设置 `world.copy-mode: link`。作者需要自行管理实体和地图还原，且防止共享地形写盘；最多一个实例也不代表写入安全。复杂模组场景建议 `copy`。两个复制模式都需要 `scripts/on_reset.js` 同步还原并返回布尔 `true` 才会复用，缺失或失败时销毁。详见 [世界管理](./guide/world-management.md#每副本覆盖与常驻复用)。
 
 ## 性能相关
+
+### 如何开启真正的秒加载（< 15ms 瞬进）并验证是否生效？
+
+1. **零常驻内存优化默认开启**：`world.creator: "auto"`、`world.preload-core-radius: 1`（仅阻塞核心 3×3 共 9 块，外环传送后后台补载）、`world.adaptive-create-interval: true` 与空队列 0ms 直通开箱即用。
+2. **开启 L1 内存热备**：在 `config.yml` 的 `world.warm-standby.dungeons` 下为热门副本配置槽位（如 `test_dungeon: 1`），或在对应副本 `dungeon.yml` 设置 `world.warm-standby: 1`。
+3. **验证方式**：开服 10–30 秒后执行 `/md admin worlds`，看到 `[L1热备就绪]` 即已预热完成；进本后再看 `/md admin worlds` 与 `/md admin engine` 的 `P50 / P95 / 最近耗时(L1热备) / 瞬进率`。详见 [性能调优 — 秒加载与两阶段预加载](/guide/performance#秒加载与两阶段预加载)。
+
+### 配了 `warm-standby` 但 `/md admin worlds` 里没有出现热备世界？
+
+依次检查：
+1. `world.warm-standby.enabled` 是否为 `true`，且 `warm-standby.dungeons` 中的副本 ID 与 `dungeons/` 目录名完全一致（或已在该副本 `dungeon.yml` 配置 `world.warm-standby: 1`）。
+2. 是否满足堆内存守卫：默认剩余堆内存低于 `min-free-memory-percent`（默认 `25%`）时会暂停预热；`-Xmx2G` 等小内存测试服可适当调低至 `15`。
+3. 是否达到 `warm-standby.max-total`、`max-instances` 或 `max-total-instances` 上限，或模板地图目录不存在。
+4. 插件启动后约 6 秒开始首次巡检，每次巡检只预热 1 个世界，多副本按 `refill-interval-seconds` 依次补齐。
 
 ### 同时运行多个副本卡顿
 

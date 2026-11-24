@@ -39,8 +39,15 @@ world:
   instance-dir: "instances"
   # 同时最大并行复制世界数量
   max-concurrent-copies: 2
-  # 世界创建最小间隔（毫秒），防止同时创建过多世界导致卡顿
+  # 世界创建最大间隔（毫秒），防止同时创建过多世界导致卡顿
   create-interval: 1000
+  # 自适应创建间隔：热态 NMS 很快时自动压缩突发间隔，主线程卡顿时自动回退至 create-interval
+  adaptive-create-interval: true
+  adaptive-min-interval-ms: 150
+  # 创建路径：auto = 对应版本 NMS（Mohist 优先专用实现），不支持时回退；bukkit = 强制通用路径
+  creator: "auto"
+  # 文件准备/等待加载的世界请求上限，普通副本、世界 Boss、编辑器共享
+  max-pending-creates: 32
   # 复制世界时跳过的文件/文件夹
   copy-exclude:
     - "session.lock"
@@ -50,10 +57,18 @@ world:
     - "stats"
   # 副本世界空闲区块自动卸载
   idle-chunk-unload: true
-  # 预加载出生点周围区块半径
+  # 预加载出生点周围区块总半径（外围区块在传送后后台异步补载）
   preload-chunk-radius: 3
-  # 每 tick 最多预加载多少区块；越大越快，但单 tick 压力越高
+  # 阻塞入场的出生核心区块半径（1 = 3x3 共 9 块，比 7x7 减少 82% 阻塞等待）
+  preload-core-radius: 1
+  # 全服共享的每 tick 预加载步进预算
   preload-chunks-per-tick: 4
+  # NMS 非阻塞票据可用时，单个副本每 tick 最多登记多少个区块票据
+  preload-tickets-per-tick: 64
+  # 每 tick 最多使用的预加载时间预算（毫秒）
+  preload-budget-ms: 3
+  # 预加载超时秒数；超时中止入场并退款清理
+  preload-timeout-seconds: 60
   # 副本世界视距；0 表示跟随服务端默认值
   instance-view-distance: 6
   # 以下五个选项可在每个副本 dungeon.yml 的 world 节逐项覆盖。
@@ -71,7 +86,19 @@ world:
   # 模板已有范围外生成虚空，避免越界生成原版地形
   void-outside-template: true
 
-  # 旧文件预复制池：仅对 disposable 且 max-instances=0 生效，不控制常驻数量。
+  # L1 内存热备世界池（真·毫秒级瞬传引擎）：
+  # 提前在后台完成复制、NMS 世界构造与核心 3x3 区块常驻，玩家进本直接 <15ms 同 Tick 瞬传
+  warm-standby:
+    enabled: true
+    max-total: 4
+    min-free-memory-percent: 25
+    refill-interval-seconds: 15
+    world-boss-prewarm-seconds: 30
+    dungeons:
+      # 热门副本按需配置热备槽位数（也可在各副本 dungeon.yml 的 world.warm-standby 单独配置）
+      # test_dungeon: 1
+
+  # 旧文件预复制池（L2）：仅对 disposable 且 max-instances=0 生效，不控制常驻数量。
   pool:
     enabled: false
     dungeons:
@@ -138,12 +165,14 @@ dungeon:
   item-remove-lore:
     - "副本物品"
     - "无法携带出地牢"
-  # 副本队列设置
+  # 副本入场维度切换攻击锁（tick，默认 20 = 1 秒，保护 DragonMineZ 等模组客户端维度同步；纯插件服可调低如 5 或 0）
+  entry-attack-lock-ticks: 20
+  # 副本队列设置（空队列已支持 0ms 直通，不会带来额外等待）
   queue:
-    # 是否启用队列（多队伍同时启动同一副本时排队）
-    enabled: false
+    # 是否启用队列（建议保持开启，防止多队并发创建争抢主线程）
+    enabled: true
     # 同时最大创建副本数
-    max-concurrent: 3
+    max-concurrent: 1
 
   # 仅安装 DragonMineZ 时生效；正常使用保持关闭
   dbz:
@@ -199,10 +228,28 @@ loading:
 
 所有提示文本都可以在 `messages.yml` 的 `loading` 节自定义，支持的键包括 `bossbar`、`bossbar-done`、`bossbar-failed`、`title`、`subtitle`、`done-title`、`done-subtitle`、`failed-title`、`failed-subtitle`、`phase-copy`、`phase-create`、`phase-chunk`、`phase-final` 等，可使用 `%dungeon%`、`%percent%`、`%spinner%`、`%reason%` 变量。
 
-## 脚本安全（script）
+## 脚本引擎与安全（script）
 
 ```yaml
 script:
+  # 可选脚本引擎: auto / graaljs / mayjs / nashorn
+  # auto 优先级: graaljs (安装 MayJS-GraalJS 即可独立运行，无需装 MayJS，JDK 21+) > mayjs (MayJS 3.0+) > nashorn (NashornJS/内置)
+  # 提示: 使用 GraalVM JDK 21 可零配置启用 Truffle JIT 峰值编译性能；执行 /md admin engine 查看激活状态与 JIT 诊断。
+  engine: "auto"
+  # 执行熔断保护（支持熔断的引擎如 GraalJS 生效；设为 0 表示不限制）
+  execution-limit:
+    # 单次脚本调用最大可执行语句数（防止死循环卡死主线程）
+    max-statements: 500000
+    # 单次脚本调用超时时间（毫秒）
+    timeout-ms: 5000
+  # 可选安全沙箱（默认关闭以保持 100% 向下兼容；开启后限制脚本通过 Java.type 访问黑名单类）
+  sandbox:
+    enabled: false
+    blacklist:
+      - "java.lang.Runtime"
+      - "java.lang.ProcessBuilder"
+      - "java.lang.System"
+      - "javax.script."
   # 是否允许脚本以控制台身份执行命令（utils.runCommand / players.runCommand）
   allow-console-command: false
   # 是否允许脚本以玩家身份执行命令（utils.runCommandAsPlayer）
@@ -305,6 +352,11 @@ revive-coin:
 | `item-restrictions.cannot-take-out` | List | 空 | 不能带出副本的物品 |
 | `item-restrictions.right-click-ban` | List | 空 | 禁止右键使用的物品 |
 | `item-restrictions.clear-on-fail` | boolean | false | 失败时是否清除副本物品 |
+| `world.copy-mode` | String | 继承全局 | 单副本覆盖复制方式：`link` / `copy` |
+| `world.mode` | String | 继承全局 | 单副本覆盖生命周期：`disposable` / `reusable` |
+| `world.max-instances` | int | 继承全局 | 单副本世界槽位上限（`0` 不限，`1–256`） |
+| `world.warm-standby` | int | `0` | 单副本 L1 热备槽位数（`0–8`），大于 0 时优先于主配置 `world.warm-standby.dungeons` |
+| `world.reuse.*` | - | 继承全局 | `idle-timeout-minutes` 与 `max-idle` 单副本覆盖 |
 | `world-boss.*` | - | - | 世界 Boss 配置，见下 |
 
 ## 世界 Boss 配置
