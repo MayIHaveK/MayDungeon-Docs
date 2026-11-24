@@ -9,6 +9,7 @@ export default defineConfig({
   themeConfig: {
     nav: [
       { text: '指南', link: '/guide/installation' },
+      { text: '脚本引擎', link: '/guide/script-engine' },
       { text: '脚本 API', link: '/api/overview' },
       { text: '示例', link: '/examples/' },
       { text: '常见问题', link: '/faq' }
@@ -19,17 +20,18 @@ export default defineConfig({
         {
           text: '入门',
           items: [
-            { text: '安装', link: '/guide/installation' },
+            { text: '安装与 Java 选型', link: '/guide/installation' },
             { text: '快速开始', link: '/guide/quick-start' },
-            { text: '创建副本', link: '/guide/create-dungeon' },
-            { text: '配置文件', link: '/guide/config' },
+            { text: '创建副本 (v2 单包)', link: '/guide/create-dungeon' },
+            { text: '配置文件 (v2 统一)', link: '/guide/config' },
             { text: '界面配置', link: '/guide/gui-config' }
           ]
         },
         {
-          text: '副本功能',
+          text: '副本功能与脚本',
           items: [
-            { text: '事件脚本', link: '/guide/events' },
+            { text: '脚本引擎与跨插件/Mod', link: '/guide/script-engine' },
+            { text: '事件脚本与单文件写法', link: '/guide/events' },
             { text: '预设模板', link: '/guide/presets' },
             { text: '怪物系统', link: '/guide/monsters' },
             { text: '组队系统', link: '/guide/teams' },
@@ -47,7 +49,7 @@ export default defineConfig({
         {
           text: '服主运维',
           items: [
-            { text: '世界管理', link: '/guide/world-management' },
+            { text: '世界管理与槽位引擎', link: '/guide/world-management' },
             { text: '可视化编辑器', link: '/guide/editor' },
             { text: '关服与恢复', link: '/guide/recovery' },
             { text: '性能调优', link: '/guide/performance' }
@@ -56,7 +58,7 @@ export default defineConfig({
       ],
       '/api/': [
         {
-          text: '脚本 API',
+          text: '核心脚本 API',
           items: [
             { text: '总览', link: '/api/overview' },
             { text: 'dungeon 副本', link: '/api/dungeon' },
@@ -69,7 +71,19 @@ export default defineConfig({
             { text: 'holograms 全息文字', link: '/api/holograms' },
             { text: 'npc NPC', link: '/api/npc' },
             { text: 'ranking 伤害排行', link: '/api/ranking' },
-            { text: 'utils 工具', link: '/api/utils' }
+            { text: 'utils 工具与互操作', link: '/api/utils' }
+          ]
+        },
+        {
+          text: 'v2 扩展脚本 API',
+          items: [
+            { text: 'bossbar Boss血条', link: '/api/bossbar' },
+            { text: 'scoreboard 侧边栏', link: '/api/scoreboard' },
+            { text: 'stages 声明式阶段', link: '/api/stages' },
+            { text: 'combat 战斗与粒子特效', link: '/api/combat' },
+            { text: 'loot 掉落表与发奖', link: '/api/loot' },
+            { text: 'blocks 方块机关与回滚', link: '/api/blocks' },
+            { text: 'records 首通与竞速榜', link: '/api/records' }
           ]
         },
         {

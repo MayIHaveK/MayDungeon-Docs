@@ -19,6 +19,11 @@
 | `runCommand(cmd)` | void | 以控制台执行命令 |
 | `runCommandAsPlayer(name, cmd)` | void | 以指定玩家身份执行命令 |
 | `log(msg)` | void | 输出日志到控制台 |
+| `findClass(className)` | Class \| null | **v2 新增**：通过跨插件/Mod 复合类加载器安全查找任意类（未找到或被沙箱拦截返回 `null`，不抛异常） |
+| `hasClass(className)` | boolean | **v2 新增**：检测指定插件类或 Forge/Mohist Mod 类是否存在 |
+| `getPlugin(pluginName)` | Plugin \| null | **v2 新增**：获取任意已启用的 Bukkit 插件主实例，用于直接调用其 Java API |
+| `getService(className)` | Object \| null | **v2 新增**：从 Bukkit `ServicesManager` 获取服务提供者（如 Vault / LuckPerms / MayJS） |
+| `isModLoaded(modId)` | boolean | **v2 新增**：检测指定 Forge / NeoForge / Fabric Mod ID 是否已加载 |
 
 ## 使用示例
 

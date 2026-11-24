@@ -41,7 +41,13 @@
 | `setBlockPlace(bool)` | void | 允许/禁止放置方块 |
 | `setPvp(bool)` | void | 允许/禁止 PVP |
 | `getParams()` | Object | 获取副本启动参数 |
-| `getPresets()` | Object | 获取 presets.yml 全部数据 |
+| `getConfig()` | Map | **v2 新增**：获取当前 `dungeon.yml` 的只读配置快照（无需去 `presets.yml` 重复抄写 `time-limit` 等参数） |
+| `getConfigValue(key)` | Object | **v2 新增**：按键读取 `dungeon.yml` 配置值（兼容短横线与下划线，如 `time-limit` / `time_limit`） |
+| `getConfigInt(key, def)` | int | **v2 新增**：读取整型配置项（缺省返回 `def`） |
+| `getDifficulty()` | String | **v2 新增**：获取当前激活的难度 ID |
+| `getDifficultyName()` | String | **v2 新增**：获取当前激活的难度显示名 |
+| `getDifficultySetting(path, def)` | Object | **v2 新增**：点分路径读取当前难度 `settings` 自定义数值 |
+| `getPresets()` | Object | 获取 `presets.yml` 及 `dungeon.yml` 内联 `presets` 合并后的全部数据 |
 | `getPreset(path)` | Object | 点分路径获取预设值 |
 
 ## 使用示例

@@ -52,7 +52,7 @@ MayDungeon 支持按 `/md` 子命令精确授权。未拥有对应权限时，�
 ## 管理与编辑命令
 
 - `maydungeon.command.admin`：全部 `/md admin` 命令
-- `maydungeon.command.admin.<子命令>`：单独授权 `reload`、`import`、`forceend`、`instances`、`worlds`、`engine`、`tp`、`kick`、`stamina`、`dailylimit`、`worldboss` 或 `revivecoin`
+- `maydungeon.command.admin.<子命令>`：单独授权 `reload`、`import`、`forceend`、`instances`、`worlds`、`engine`、`migrate`、`tp`、`kick`、`stamina`、`dailylimit`、`worldboss` 或 `revivecoin`
 - `maydungeon.command.editor`：全部 `/md editor` 命令
 - `maydungeon.command.editor.<子命令>`：单独授权 `edit`、`save`、`exit`、`tools`、`setspawn`、`addarea`、`addobstacle`、`addwave`、`remove` 或 `list`
 - `maydungeon.command.script`：允许使用 `/md script`

@@ -1,141 +1,84 @@
-# 事件系统
+# 事件脚本与单文件写法
 
-MayDungeon 使用事件驱动模型，副本在关键节点自动执行对应的 JS 脚本文件。
+MayDungeon v2 同时支持两种脚本组织方式，且两者可以混用：
 
-## 事件列表
+1. **推荐（v2 单文件模式）**：在 `scripts/dungeon.js`（或 `scripts/main.js`）中用 `defineDungeon({ ... })` 一次性定义所有钩子，全副本只编译一次、共享顶层变量与 JIT 热代码。
+2. **经典（多文件模式，100% 兼容）**：在 `scripts/` 下按事件名创建独立 `on_*.js` 文件；开启多难度时采用 **级联继承（`scripts/<难度>/` 优先，缺失自动回退根目录 `scripts/`）**，不再需要把公共脚本复制粘贴两份！
 
-副本 `scripts/` 目录下的每个 JS 文件对应一个事件：
+## 事件与钩子对照表
 
-| 脚本文件 | 触发时机 | trigger 对象 |
-|----------|----------|--------------|
-| `on_init.js` | 每局取得世界后、玩家传入前，复用世界也执行 | null |
-| `on_start.js` | 玩家已传入副本，副本正式开始 | null |
-| `on_player_join.js` | 玩家首次加入副本 | 加入的玩家 |
-| `on_player_rejoin.js` | 玩家断线重连回副本 | 重连的玩家 |
-| `on_player_quit.js` | 玩家退出副本 | 退出的玩家 |
-| `on_player_death.js` | 玩家死亡 | 死亡的玩家 |
-| `on_monster_kill.js` | 怪物被击杀 | 击杀者（可能 null） |
-| `on_damage.js` | 玩家对副本实体造成有效伤害 | 造成伤害的玩家 |
-| `on_group_clear.js` | 怪物组全部清除 | null |
-| `on_area_enter.js` | 玩家进入已定义区域 | 进入的玩家 |
-| `on_area_leave.js` | 玩家离开已定义区域 | 离开的玩家 |
-| `on_interact.js` | 玩家右键方块 | 交互的玩家 |
-| `on_entity_interact.js` | 玩家右键实体/NPC | 交互的玩家 |
-| `on_boss_reward.js` | 世界 Boss 成功结束时的排行结算，先于 `on_reward.js` 触发 | null |
-| `on_reward.js` | 副本通关（仅成功时触发） | null |
-| `on_complete.js` | 副本判定为成功 | null |
-| `on_fail.js` | 副本判定为失败 | null |
-| `on_end.js` | 副本结束（统一收尾，无论成功失败） | null |
-| `on_reset.js` | `reusable` 世界准备复用，玩家撤离和基础清理后；必须同步还原并返回布尔 `true` | null |
+单文件 `dungeon.js` 同时识别 **camelCase** 与 **snake_case** 钩子名：
 
-`on_reset.js` 固定放在副本根 `scripts/` 中，所有难度共用。通过 `event.get("world")` 获取要还原的世界，`event.get("instanceId")` 获取旧会话 ID。缺失、异常或未返回布尔 `true` 时销毁世界。它不自动还原任意地图和模组数据，完整约定见 [世界管理](./world-management.md#还原脚本)。
+| 传统文件名 | `defineDungeon` 钩子名 | 触发时机 | `trigger` |
+| --- | --- | --- | --- |
+| `on_init.js` | `onInit` | 取得世界后、玩家传入前（复用世界也会执行） | `null` |
+| `on_start.js` | `onStart` | 玩家全部传入副本，正式开始 | `null` |
+| `on_player_join.js` | `onPlayerJoin` | 玩家加入副本 | 加入的玩家 |
+| `on_player_rejoin.js` | `onPlayerRejoin` | 玩家断线重连回副本 | 重连的玩家 |
+| `on_player_quit.js` | `onPlayerQuit` | 玩家退出副本 | 退出的玩家 |
+| `on_player_death.js` | `onPlayerDeath` | 玩家死亡 | 死亡的玩家 |
+| `on_monster_kill.js` | `onMonsterKill` | 怪物被击杀 | 击杀者（可能 `null`） |
+| `on_damage.js` | `onDamage` | 玩家对副本实体造成有效伤害 | 攻击者 + `event` Map |
+| `on_group_clear.js` | `onGroupClear` | 怪物组全灭（自动联动 `stages` 推进） | `null` + `event.get("group")` |
+| `on_area_enter.js` | `onAreaEnter` | 玩家进入已定义区域 | 进入的玩家 |
+| `on_area_leave.js` | `onAreaLeave` | 玩家离开已定义区域 | 离开的玩家 |
+| `on_interact.js` | `onInteract` | 玩家右键方块 | 交互的玩家 |
+| `on_entity_interact.js` | `onEntityInteract` | 玩家右键实体/NPC | 交互的玩家 |
+| `on_boss_reward.js` | `onBossReward` | 世界 Boss 成功结束排行奖励（先于 `onReward`） | `null` |
+| `on_reward.js` | `onReward` | 通关发奖（仅成功时） | `null` |
+| `on_complete.js` | `onComplete` | 副本判定成功 | `null` |
+| `on_fail.js` | `onFail` | 副本判定失败 | `null` |
+| `on_end.js` | `onEnd` | 副本结束收尾（无论成败） | `null` |
+| `on_reset.js` | `onReset` | `reusable` 世界还原（必须同步还原并 `return true`；若使用过 `blocks` 会自动先回滚方块） | `null` |
 
-## trigger 对象
+## 性能机制：事件存在性位图（0ns 跳过）
 
-当事件与特定玩家相关时，`trigger` 对象可用于获取触发者信息：
-
-```javascript
-// on_player_death.js
-var playerName = trigger.getPlayerName();
-dungeon.broadcast("&c" + playerName + " 阵亡了！");
-```
-
-无关联玩家的事件中 `trigger` 为 null，使用前无需判空（不会报错，但调用方法会返回空值）。
-
-## 事件上下文数据
-
-部分事件会通过 `dungeon.getData()` 或 JS 变量 `event` 提供额外上下文：
-
-| 事件 | 数据 key | 说明 |
-|------|----------|------|
-| `on_area_enter` / `on_area_leave` | `_area_name` | 触发区域名称 |
-| `on_group_clear` | `_group_name` | 被清除的怪物组名 |
-| `on_monster_kill` | `_monster_type` | 被击杀怪物类型 |
-| `on_damage` | `event.get("damage")` | 本次实际计入的有效伤害；会按目标剩余生命截断，避免溢出伤害虚高 |
-| `on_damage` | `event.get("finalDamage")` / `event.get("rawDamage")` | Bukkit 最终伤害 / 原始伤害，通常统计排行用 `damage` 即可 |
-| `on_damage` | `event.get("target")` / `event.get("targetUuid")` / `event.get("targetType")` / `event.get("targetName")` | 被攻击实体上下文 |
-| `on_damage` | `event.get("isWorldBoss")` / `event.get("cause")` / `event.get("instanceId")` | 是否世界 Boss、伤害原因、实例 ID |
-| `on_damage` | `event.get("cause") == "KILLING_BLOW"` | 怪物死亡时的最后一击补记，用于避免致死一刀漏统计 |
-| `on_entity_interact` | `_interact_npc_id` | 被交互的 NPC ID |
+副本加载或首次触发时，引擎会为当前作用域生成 `int eventMask` 存在性位图。对于 `on_damage` 等每秒触发数十上百次的高频事件，如果副本未定义对应脚本，热路径通过一次位运算 **0ns 零分配直接跳过**，不会产生任何 GC 压力。
 
 ## 执行顺序
 
-```
-on_init → on_player_join(×N) → on_start → [运行时事件] → on_complete/on_fail → on_reward(仅成功) → on_end
+```text
+onInit → onPlayerJoin(×N) → onStart → [运行时事件] → onComplete/onFail → [onBossReward] → onReward → onEnd → [onReset]
 ```
 
-## 使用示例
-
-### 完整副本流程
+## 单文件写法示例（GraalJS ES2023+）
 
 ```javascript
-// on_init.js
-areas.define("boss_room", "100,60,100", "130,80,130");
-obstacles.define("gate", "99,60,114", "99,64,116", "IRON_BARS");
-dungeon.setBlockBreak(false);
-world.setTime(18000);
-```
+// dungeons/demo/scripts/dungeon.js
+const { warnAndStrike } = require('common/boss-utils');
 
-```javascript
-// on_start.js
-dungeon.broadcast("&a副本开始！前往标记点消灭怪物！");
-monsters.spawnMultiple("wave1", "ZOMBIE", "110,65,110", 10, 5);
-tasks.startRepeating("guide", 40, function() {
-    world.drawPathToAll("115,65,115", 0, 255, 0, 0.5, 30);
+defineDungeon({
+  onInit({ dungeon, world, stages }) {
+    world.setTime(14000);
+    stages.define('wave1', { group: 'g1', next: 'boss' });
+    stages.define('boss', { group: 'boss_g', completeOnClear: true });
+  },
+  onStart({ stages, bossbar }) {
+    stages.start('wave1');
+    bossbar.show('main', '&6讨伐进行中', 1.0, 'YELLOW');
+  },
+  onDamage({ trigger, event, combat }) {
+    const dmg = event.get('damage');
+    if (dmg > 50 && combat.cooldown(trigger.getPlayer(), 'fx', 1000)) {
+      combat.particleRing(trigger.getPlayer(), 'FLAME', 1.5, 16);
+    }
+  },
+  onComplete({ loot, records, players, dungeon }) {
+    loot.grantFirstClear(players.getAll(), 'first_clear');
+    loot.grantTable(players.getAll(), 'clear', 2);
+    records.recordClear(players.getAll(), dungeon.getElapsedTime());
+  }
 });
 ```
 
-```javascript
-// on_group_clear.js
-var group = dungeon.getData("_group_name");
-if (group == "wave1") {
-    obstacles.remove("gate");
-    dungeon.broadcast("&a大门开启！Boss 房间已解锁！");
-    monsters.spawnMythic("boss", "DragonKing", "115,65,115", 1, 0);
-}
-if (group == "boss") {
-    dungeon.broadcast("&6恭喜通关！");
-    dungeon.endWithDelay(true, 5);
-}
+## 难度级联覆盖示例
+
+开启多难度后，只需把公共逻辑放在根目录 `scripts/`，在难度子目录（如 `scripts/Hard/`）里只放差异文件：
+
+```text
+scripts/
+├── on_init.js      ← 所有难度自动继承
+├── on_damage.js    ← 所有难度自动继承
+└── Hard/
+    └── on_start.js ← 仅覆盖困难难度的开场刷怪！
 ```
-
-```javascript
-// on_player_death.js
-var name = trigger.getPlayerName();
-dungeon.broadcast("&c" + name + " 倒下了！存活: " + players.getAliveCount());
-if (players.areAllDead()) {
-    dungeon.end(false);
-}
-```
-
-```javascript
-// on_damage.js
-var damage = event.get("damage");
-if (damage <= 0) return;
-
-var elapsed = dungeon.getElapsedTime();
-var records = dungeon.getMap("damage_records");
-var player = trigger.getPlayer();
-var uuid = player.getUniqueId().toString();
-var record = records.get(uuid);
-
-if (record == null) {
-    record = dungeon.newMap();
-    record.put("uuid", uuid);
-    record.put("name", trigger.getPlayerName());
-    record.put("damage", 0.0);
-    record.put("first_hit", elapsed);
-    records.put(uuid, record);
-}
-
-record.put("name", trigger.getPlayerName());
-record.put("damage", Number(record.get("damage")) + damage);
-record.put("last_hit", elapsed);
-```
-
-## 注意事项
-
-- 事件脚本文件不存在时会被安全忽略，不会报错
-- 脚本内部异常会被捕获并输出到控制台，不会导致副本崩溃
-- 避免在事件脚本中执行死循环或极耗时操作
-- 每个脚本文件独立执行，变量不在脚本间共享（使用 `dungeon.setData` 传递数据）

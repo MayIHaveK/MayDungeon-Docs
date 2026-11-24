@@ -1,19 +1,24 @@
-# 配置文件
+# 配置文件（v2 统一结构）
 
-MayDungeon 的全局配置文件位于 `plugins/MayDungeon/config.yml`。
+MayDungeon 的主配置文件位于 `plugins/MayDungeon/config.yml`。v2 将全部配置收口为 6 个清晰顶层块（`schema-version: 2`），并由不可变强类型 `ConfigSnapshot` 统一读取，同时 **100% 向下兼容旧版 v1 配置**。
 
-## 数据存储（storage）
+> 老服可执行 `/md admin migrate config` 自动备份为 `config.yml.v1.bak` 并重写为整洁的 v2 配置。
 
-插件的玩家数据（体力、每日次数、复活币、副本会话等）支持三种存储后端：
+## 1. 数据存储（`storage`）
 
 ```yaml
+schema-version: 2
+
+bind:
+  qq: ""
+
 storage:
-  # 存储类型: yaml / sqlite / mysql
-  type: yaml
-  # SQLite 配置（type 为 sqlite 时生效）
+  # 存储类型: sqlite（推荐单文件库）/ yaml / mysql（跨服）
+  type: sqlite
+  # YAML 目录结构（仅 type=yaml 时生效）: unified（单玩家单文件 data/players/<uuid>.yml）/ legacy（旧版 4 目录）
+  yaml-format: unified
   sqlite:
     file: "data/maydungeon.db"
-  # MySQL 配置（type 为 mysql 时生效）
   mysql:
     host: "localhost"
     port: 3306
@@ -24,225 +29,133 @@ storage:
 ```
 
 | 后端 | 说明 | 适用场景 |
-|------|------|---------|
-| `yaml` | 数据以 YAML 文件存放在插件目录下 | 默认，小型服务器，零依赖 |
-| `sqlite` | 单文件数据库，路径由 `sqlite.file` 指定 | 中型服务器，玩家较多时性能更好 |
-| `mysql` | 远程数据库，表名带 `table-prefix` 前缀 | 大型服务器 / 跨服共享数据 |
+| --- | --- | --- |
+| `sqlite` | 单文件 WAL 模式数据库（默认推荐），零外部依赖、原子事务 | 绝大多数单服（推荐） |
+| `yaml` | v2 默认 `unified` 模式将单玩家体力/每日次数/复活币/恢复点聚合至 `data/players/<uuid>.yml`，减少 80% 零散文件 | 便于手工查看/编辑的小型服 |
+| `mysql` | 与 SQLite 共享同一套方言抽象 JDBC 引擎，支持跨服共享与批量写入 | 多服群组 / 大服 |
 
-切换后端后需重启服务器。插件不会自动迁移旧后端中的玩家数据，切换前请先停服并备份。
+> 使用 `/md admin migrate storage` 可将旧版 4 目录 YAML 聚合为 `data/players/`，或在切换为 SQLite / MySQL 后把本地 YAML 玩家数据一键导入数据库。
 
-## 世界管理（world）
+## 2. 统一世界槽位引擎（`world`）
+
+所有副本共用同一套直观配置（主配置给默认值，单副本 `dungeon.yml` 按需覆盖）：
 
 ```yaml
 world:
-  # 临时副本实例目录（相对于服务器根目录）
   instance-dir: "instances"
-  # 同时最大并行复制世界数量
+  creator: "auto"              # auto (NMS/Mohist) / bukkit
+  isolation: "link"            # link (硬链接地形，快) / copy (完整隔离，CustomNPCs推荐)
+  lifecycle: "disposable"      # disposable (每局销毁) / reusable (onReset 还原复用)
+  void-outside-template: true
+  view-distance: 6
   max-concurrent-copies: 2
-  # 世界创建最大间隔（毫秒），防止同时创建过多世界导致卡顿
   create-interval: 1000
-  # 自适应创建间隔：热态 NMS 很快时自动压缩突发间隔，主线程卡顿时自动回退至 create-interval
   adaptive-create-interval: true
   adaptive-min-interval-ms: 150
-  # 创建路径：auto = 对应版本 NMS（Mohist 优先专用实现），不支持时回退；bukkit = 强制通用路径
-  creator: "auto"
-  # 文件准备/等待加载的世界请求上限，普通副本、世界 Boss、编辑器共享
   max-pending-creates: 32
-  # 复制世界时跳过的文件/文件夹
+  idle-chunk-unload: true
   copy-exclude:
     - "session.lock"
     - "uid.dat"
     - "playerdata"
     - "advancements"
     - "stats"
-  # 副本世界空闲区块自动卸载
-  idle-chunk-unload: true
-  # 预加载出生点周围区块总半径（外围区块在传送后后台异步补载）
-  preload-chunk-radius: 3
-  # 阻塞入场的出生核心区块半径（1 = 3x3 共 9 块，比 7x7 减少 82% 阻塞等待）
-  preload-core-radius: 1
-  # 全服共享的每 tick 预加载步进预算
-  preload-chunks-per-tick: 4
-  # NMS 非阻塞票据可用时，单个副本每 tick 最多登记多少个区块票据
-  preload-tickets-per-tick: 64
-  # 每 tick 最多使用的预加载时间预算（毫秒）
-  preload-budget-ms: 3
-  # 预加载超时秒数；超时中止入场并退款清理
-  preload-timeout-seconds: 60
-  # 副本世界视距；0 表示跟随服务端默认值
-  instance-view-distance: 6
-  # 以下五个选项可在每个副本 dungeon.yml 的 world 节逐项覆盖。
-  # link 只共享地形文件，实体/POI 独立复制；不支持时回退复制；copy 隔离全部文件。
-  # reusable 也允许 link；作者需管理实体和地图还原，单实例也不等于防止共享地形写盘。
-  copy-mode: "link"
-  mode: "disposable"         # reusable 按需创建，不按上限预先建满
-  max-instances: 0           # 每种副本的世界槽位上限，0 不限
-  reuse:
-    idle-timeout-minutes: 10 # 每个世界还原完成后独立计时，超时销毁
-    max-idle: 1              # 空闲保留上限，不是保留底数；0 不保留
-  # 以下两项只在全局生效，不被副本覆盖。
-  max-total-instances: 0     # 全服已分配世界总上限，0 不限
-  max-idle-worlds: 8         # 全服空闲常驻世界保留上限，0 不保留
-  # 模板已有范围外生成虚空，避免越界生成原版地形
-  void-outside-template: true
 
-  # L1 内存热备世界池（真·毫秒级瞬传引擎）：
-  # 提前在后台完成复制、NMS 世界构造与核心 3x3 区块常驻，玩家进本直接 <15ms 同 Tick 瞬传
-  warm-standby:
-    enabled: true
-    max-total: 4
-    min-free-memory-percent: 25
-    refill-interval-seconds: 15
+  # 统一槽位策略（首局秒进配 standby，打完复用配 lifecycle: reusable）
+  slots:
+    max-active: 0              # 单副本同时存在的槽位上限（0 = 不限，1-256）
+    standby: 0                 # 默认 L1 内存热备数量（推荐按副本单独配）
+    idle-keep: 1               # reusable 模式每副本空闲留存上限
+    idle-timeout-minutes: 10   # 空闲复用槽位超时自动销毁时长
+
+  # 统一区块预加载策略（默认 none 跳过阻塞预加载，0ms 瞬传）
+  preload:
+    mode: "none"               # none（默认推荐）/ spawn（等落点1块）/ radius（等核心半径）
+    radius: 1                  # 仅 mode=radius 时生效（1 = 3x3 共 9 块）
+    background-radius: -1      # 传送后后台补载半径（-1 = 关闭）
+    chunks-per-tick: 4
+    tickets-per-tick: 64
+    budget-ms: 3
+    timeout-seconds: 60
+
+  # 全服硬上限与老年代堆内存守卫（仅主配置生效）
+  limits:
+    max-total-worlds: 0        # 全服副本世界上限（0 = 不限）
+    standby-enabled: true
+    max-total-standby: 4       # 全服 L1 热备总上限
+    max-total-idle: 8          # 全服空闲复用总上限
+    min-free-oldgen-percent: 15 # JVM 老年代可用百分比守卫（0 = 关闭）
+    standby-refill-seconds: 15
     world-boss-prewarm-seconds: 30
-    dungeons:
-      # 热门副本按需配置热备槽位数（也可在各副本 dungeon.yml 的 world.warm-standby 单独配置）
-      # test_dungeon: 1
-
-  # 旧文件预复制池（L2）：仅对 disposable 且 max-instances=0 生效，不控制常驻数量。
-  pool:
-    enabled: false
-    dungeons:
-      # example_dungeon:
-      #   cache-size: 3
-    refill-interval: 30
+    standby-dungeons: {}       # 按副本指定热备数，如 ldz: 1
 ```
 
-详细说明请参考 [世界管理](./world-management.md) 和 [性能优化](./performance.md)。
+## 3. 游戏玩法全局设置（`gameplay`）
 
-::: warning CustomNPCs 与实体残留
-CustomNPCs 等复杂模组场景建议使用 `copy`，可以在该副本 `dungeon.yml` 覆盖全局默认值。旧版本 `link` 共享实体存档，可能让 NPC 数据写入模板；当前版本只链接地形文件，仍需防止地形写盘。若模板已经混入 NPC，还需恢复或清理模板。`reusable` 需要 `scripts/on_reset.js` 同步完成还原并返回布尔 `true`，否则销毁世界。详见 [世界管理](./world-management.md#每副本覆盖与常驻复用)。
-:::
-
-::: warning
-若副本地图依赖模板范围外继续生成原版地形，请将 `void-outside-template` 设为 `false`。`instances/` 是临时目录，请勿在其中手工建图或存放文件。
-:::
-
-## 队伍设置（team）
+将原先分散在 `setting`、`team`、`dungeon`、`stamina`、`daily-limit`、`revive-coin` 的配置统一归类至 `gameplay`（旧版顶层键仍 100% 兼容）：
 
 ```yaml
-team:
-  # 队伍总人数上限，包含队长，最小为 1
-  max-players: 20
-  # 所有成员离线后自动解散
-  auto-disband:
-    enabled: true
-    # 最后一名在线成员离线后等待多少秒再复查
-    delay-seconds: 60
-```
-
-修改后执行 `/md admin reload` 生效。旧配置 `dungeon.team-player-limit` 仍兼容；同时存在时优先使用 `team.max-players`。
-
-## 全局副本设置（dungeon）
-
-```yaml
-dungeon:
-  # 地牢内聊天设置
-  dungeon-chat:
-    enable: true
-    prefix: "&f[&6队内消息&f] &7%player_name%&f&l:"
-  # 离线保护超时（秒）- 超时后自动退出副本
+gameplay:
+  lobby-world: "world"
+  default-mode: "SURVIVAL"
+  debug: false
+  bungee-cord: false
   offline-timeout: 120
-  # 旧版队伍人数上限，仅在未配置 team.max-players 时生效
-  team-player-limit: 20
-  # 视图类型: CHAT / BOOK
   view-type: "CHAT"
-  # 世界 Boss 调度器设置
+  daily-limit-reset-hour: 5
+  entry-attack-lock-ticks: 20
+  allowed-commands: ["md", "msg", "r", "tell"]
+  item-remove-lore: ["副本物品", "无法携带出地牢"]
+  dungeon-chat:
+    enabled: true
+    prefix: "&f[&6队内消息&f] &7%player_name%&f&l:"
+  team:
+    max-players: 20
+    auto-disband:
+      enabled: true
+      delay-seconds: 60
+  queue:
+    enabled: true
+    max-concurrent: 1
   world-boss:
     scheduler:
-      # 插件启动后延迟多少秒进行第一次开放时间扫描（建议 3-10 秒）
       initial-delay-seconds: 5
-      # 开放时间扫描间隔（秒，建议 10-60）
       check-interval-seconds: 60
-  # 每日挑战次数全局重置时间（24小时制）
-  daily-limit-reset-hour: 5
-  # 允许在地牢内输入的命令（精确匹配命令名；支持 plugin:cmd 命名空间）
-  allowed-commands:
-    - "md"
-    - "msg"
-    - "r"
-    - "tell"
-  # 副本结束时清除含有以下 lore 的物品
-  item-remove-lore:
-    - "副本物品"
-    - "无法携带出地牢"
-  # 副本入场维度切换攻击锁（tick，默认 20 = 1 秒，保护 DragonMineZ 等模组客户端维度同步；纯插件服可调低如 5 或 0）
-  entry-attack-lock-ticks: 20
-  # 副本队列设置（空队列已支持 0ms 直通，不会带来额外等待）
-  queue:
-    # 是否启用队列（建议保持开启，防止多队并发创建争抢主线程）
+  stamina:
+    enabled: false
+    max: 100
+    recovery-mode: "DAILY_RESET"
+    daily-reset-hour: 5
+    recovery-interval-minutes: 5
+    recovery-amount: 1
+    admin-bypass: true
+    bypass-permission: "maydungeon.stamina.bypass"
+    save-interval: 60
+  daily-limit:
+    save-interval: 120
+  revive-coin:
     enabled: true
-    # 同时最大创建副本数
-    max-concurrent: 1
-
-  # 仅安装 DragonMineZ 时生效；正常使用保持关闭
+    gui-delay: 20
+    gui-title: "&8复活确认"
+    save-interval: 60
   dbz:
     debug: false
     probe-interval-ticks: 20
 ```
 
-MayDungeon 会在玩家进出副本世界后自动补发 DragonMineZ 状态同步，不需要额外开关，也不会修改玩家数值。只有排查“副本内无法近战攻击”时才临时开启 `dungeon.dbz.debug`；定位结束后立即关闭，以免控制台刷屏。
-
-## 全局设置（setting）
-
-```yaml
-setting:
-  # 控制台是否启用 ANSI 真彩色渐变启动面板；旧控制台显示乱码时可关闭
-  colorful-console: true
-  # 玩家退出副本后传送到的世界
-  lobby-world: "world"
-  # 默认游戏模式
-  default-mode: "SURVIVAL"
-  # 调试模式
-  debug: false
-  # BungeeCord 跨服支持
-  bungee-cord: false
-```
-
-## 副本加载提示（loading）
-
-副本世界异步生成期间，插件会向玩家展示进度动画（BossBar 进度条 + 标题 + 阶段提示 + 音效）：
-
-```yaml
-loading:
-  # 总开关
-  enabled: true
-  # 预计世界创建耗时（秒），进度条会在该时间内快速爬升并逼近 95%，完成时充满
-  expected-seconds: 8
-  # BossBar 进度条
-  bossbar:
-    enabled: true
-    # 颜色: BLUE / GREEN / PINK / PURPLE / RED / WHITE / YELLOW
-    color: BLUE
-    # 样式: SOLID / SEGMENTED_6 / SEGMENTED_10 / SEGMENTED_12 / SEGMENTED_20
-    style: SEGMENTED_20
-  # 屏幕标题（开始/完成/失败）
-  title:
-    enabled: true
-  # 物品栏上方的阶段提示（复制文件 → 构建世界 → 预加载区块）
-  action-bar:
-    enabled: true
-  # 音效反馈
-  sound:
-    enabled: true
-```
-
-所有提示文本都可以在 `messages.yml` 的 `loading` 节自定义，支持的键包括 `bossbar`、`bossbar-done`、`bossbar-failed`、`title`、`subtitle`、`done-title`、`done-subtitle`、`failed-title`、`failed-subtitle`、`phase-copy`、`phase-create`、`phase-chunk`、`phase-final` 等，可使用 `%dungeon%`、`%percent%`、`%spinner%`、`%reason%` 变量。
-
-## 脚本引擎与安全（script）
+## 4. 脚本引擎与安全（`script`）
 
 ```yaml
 script:
-  # 可选脚本引擎: auto / graaljs / mayjs / nashorn
-  # auto 优先级: graaljs (安装 MayJS-GraalJS 即可独立运行，无需装 MayJS，JDK 21+) > mayjs (MayJS 3.0+) > nashorn (NashornJS/内置)
-  # 提示: 使用 GraalVM JDK 21 可零配置启用 Truffle JIT 峰值编译性能；执行 /md admin engine 查看激活状态与 JIT 诊断。
+  # 引擎模式: auto / graaljs / mayjs / nashorn（可用 /md admin engine switch 在线热切换）
   engine: "auto"
-  # 执行熔断保护（支持熔断的引擎如 GraalJS 生效；设为 0 表示不限制）
+  # 是否允许脚本通过 Java.type(...) 访问任意 Bukkit 插件与 Forge/Mohist Mod 类（默认 true）
+  allow-host-class-access: true
+  # 保存 .js 文件后自动失效编译缓存（热重载，不中断运行中副本）
+  auto-reload: true
   execution-limit:
-    # 单次脚本调用最大可执行语句数（防止死循环卡死主线程）
     max-statements: 500000
-    # 单次脚本调用超时时间（毫秒）
     timeout-ms: 5000
-  # 可选安全沙箱（默认关闭以保持 100% 向下兼容；开启后限制脚本通过 Java.type 访问黑名单类）
   sandbox:
     enabled: false
     blacklist:
@@ -250,143 +163,29 @@ script:
       - "java.lang.ProcessBuilder"
       - "java.lang.System"
       - "javax.script."
-  # 是否允许脚本以控制台身份执行命令（utils.runCommand / players.runCommand）
   allow-console-command: false
-  # 是否允许脚本以玩家身份执行命令（utils.runCommandAsPlayer）
   allow-player-command: false
-  # 是否允许管理员在副本内通过 /md script <代码> 在线执行 JS
   allow-inline-command: false
-  # 脚本执行命令的最大长度
   max-command-length: 256
-  # /md script 在线代码最大长度
   max-inline-length: 1024
 ```
 
-## 体力系统配置
-
-体力系统用于限制玩家频繁刷副本。详细说明请参考 [体力系统](./stamina.md)。
+## 5. 界面与控制台表现（`ui`）
 
 ```yaml
-stamina:
-  enabled: false
-  max: 100
-  recovery-mode: DAILY_RESET  # DAILY_RESET / INTERVAL
-  daily-reset-hour: 5
-  recovery-interval-minutes: 5  # INTERVAL 模式：恢复间隔（分钟，优先于 recovery-interval）
-  recovery-interval: 300        # 旧配置兼容：恢复间隔（秒）
-  recovery-amount: 1
-  admin-bypass: true
-  bypass-permission: "maydungeon.stamina.bypass"
-  save-interval: 60  # 内存缓存刷盘间隔（秒）
-
-daily-limit:
-  save-interval: 120  # 每日次数数据刷盘间隔（秒）
+ui:
+  colorful-console: true
+  loading:
+    enabled: true
+    expected-seconds: 8
+    bossbar:
+      enabled: true
+      color: "BLUE"
+      style: "SEGMENTED_20"
+    title:
+      enabled: true
+    action-bar:
+      enabled: true
+    sound:
+      enabled: true
 ```
-
-每个副本可单独配置消耗体力值：
-
-```yaml
-# dungeon.yml
-conditions:
-  stamina-cost: 10
-```
-
-## 进入条件配置
-
-详细说明请参考 [进入条件系统](./conditions.md)。
-
-```yaml
-# dungeon.yml
-conditions:
-  min-level: 10
-  permission: "maydungeon.vip"
-  stamina-cost: 10
-  daily-limit: 3
-  daily-limit-reset-hour: -1
-  cooldown: 3600
-  money-cost: 1000
-  item-cost:
-    - "DIAMOND:5"
-    - "mythic:强化石:3"
-    - "overture:example_item:1"
-  required-items:
-    - "DIAMOND_SWORD"
-```
-
-## 复活币配置
-
-详细说明请参考 [复活币系统](./revive-coin.md)。
-
-```yaml
-revive-coin:
-  enabled: true
-  gui-delay: 20        # 死亡后弹出复活GUI延迟（tick, 20tick=1秒）
-  gui-title: "&8复活确认"
-  save-interval: 60    # 数据刷盘间隔（秒）
-```
-
-## 副本配置（dungeon.yml）
-
-每个副本目录 `plugins/MayDungeon/dungeons/<副本ID>/` 下的 `dungeon.yml` 支持以下字段：
-
-| 字段 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `display-name` | String | 目录名 | 副本显示名称（支持颜色代码） |
-| `description` | String | 空 | 副本描述 |
-| `map-name` | String | 目录名 | 使用的地图模板名（`maps/<名>/`） |
-| `type` | String | INSTANCE | 副本类型：`INSTANCE` / `WORLD_BOSS` |
-| `settings.min-players` | int | 1 | 最少玩家数 |
-| `settings.max-players` | int | 4 | 最多玩家数 |
-| `settings.time-limit` | int | 0 | 时间限制（秒，0=不限） |
-| `settings.allow-pvp` | boolean | false | 是否允许 PVP |
-| `settings.difficulty` | String | NORMAL | 世界难度 |
-| `settings.keep-inventory` | boolean | false | 死亡是否保留背包 |
-| `spawn-point` | String | "0,65,0" | 出生点坐标 `"x,y,z"` |
-| `conditions.*` | - | - | 进入条件，见 [进入条件系统](./conditions.md) |
-| `revive.max-revive` | int | 3 | 最大复活次数 |
-| `revive.revive-delay` | int | 5 | 复活延迟（秒） |
-| `revive.all-dead-timeout` | int | 20 | 全员死亡后的失败倒计时（秒） |
-| `revive.allow-revive-coin` | boolean | true | 是否允许使用复活币 |
-| `areas.<名>` | String | - | 区域定义 |
-| `allowed-commands` | List | 空 | 该副本额外允许的命令 |
-| `item-restrictions.cannot-take-out` | List | 空 | 不能带出副本的物品 |
-| `item-restrictions.right-click-ban` | List | 空 | 禁止右键使用的物品 |
-| `item-restrictions.clear-on-fail` | boolean | false | 失败时是否清除副本物品 |
-| `world.copy-mode` | String | 继承全局 | 单副本覆盖复制方式：`link` / `copy` |
-| `world.mode` | String | 继承全局 | 单副本覆盖生命周期：`disposable` / `reusable` |
-| `world.max-instances` | int | 继承全局 | 单副本世界槽位上限（`0` 不限，`1–256`） |
-| `world.warm-standby` | int | `0` | 单副本 L1 热备槽位数（`0–8`），大于 0 时优先于主配置 `world.warm-standby.dungeons` |
-| `world.reuse.*` | - | 继承全局 | `idle-timeout-minutes` 与 `max-idle` 单副本覆盖 |
-| `world-boss.*` | - | - | 世界 Boss 配置，见下 |
-
-## 世界 Boss 配置
-
-详细说明请参考 [世界 Boss](./world-boss.md)。
-
-```yaml
-# dungeon.yml
-type: WORLD_BOSS
-world-boss:
-  schedule:
-    - "19:00-20:00"
-  duration: 3600
-  max-players: 100
-  broadcast-before: [300, 60, 10]
-  allow-late-join: true
-  ranking-mode: BOTH
-```
-
-调度器扫描频率在 `config.yml` 的 `dungeon.world-boss.scheduler` 中配置（见上文"全局副本设置"）。
-
-## 授权绑定（bind）
-
-```yaml
-bind:
-  qq: ""
-```
-
-授权验证信息，请联系管理员获取。
-
-## 消息配置
-
-消息文件位于 `plugins/MayDungeon/messages.yml`，支持自定义所有插件提示文本。支持 `&` 颜色代码和 PlaceholderAPI 变量。

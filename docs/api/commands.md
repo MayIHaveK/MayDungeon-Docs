@@ -46,8 +46,12 @@ MayDungeon 的所有命令汇总，主命令为 `/md`（别名 `/maydungeon`、`
 | `/md admin reload` | 重载配置文件 |
 | `/md admin import <地图名>` | 导入地图 |
 | `/md admin instances` | 查看运行中的副本实例 |
-| `/md admin worlds [副本ID\|all] [页码]` | 每页 6 个世界：含 `L1热备就绪` / 空闲复用 / 运行状态、复制策略、玩家/区块数、闲置回收倒计时，及顶部入场 P50/P95 与各路径命中统计；权限 `maydungeon.command.admin.worlds` |
-| `/md admin engine` | 查看当前脚本引擎、Truffle JIT 状态、编译缓存命中率、预加载入场通道（Paper急迫异步/非阻塞票据/核心半径）与瞬进率；权限 `maydungeon.command.admin.engine` |
+| `/md admin worlds [副本ID\|all] [页码]` | 每页 6 个世界：含 `L1热备就绪` / 空闲复用 / 运行状态、隔离策略、玩家/区块数、闲置回收倒计时，及顶部入场 P50/P95 与各路径命中统计；权限 `maydungeon.command.admin.worlds` |
+| `/md admin engine` | 查看当前脚本引擎、精准 JVM / GraalVM / JVMCI 诊断与升级建议、`Java.type` 挂载插件/Mod 统计、编译缓存命中率、预加载模式与 L1 热备状态；权限 `maydungeon.command.admin.engine` |
+| `/md admin engine switch <auto\|graaljs\|mayjs\|nashorn> [--save]` | **v2 新增**：免重启在线热切换脚本引擎并重新预热所有副本脚本（加 `--save` 写回 `config.yml`） |
+| `/md admin engine reload` | **v2 新增**：仅热重载脚本编译缓存与共享库，不中断运行中的副本世界 |
+| `/md admin engine bench [次数]` | **v2 新增**：在当前引擎运行微基准测试，实测热路径单次调用耗时（ns）与吞吐量 |
+| `/md admin migrate <config\|dungeons\|storage\|all> [--force]` | **v2 新增**：将旧版 v1 `config.yml`、独立 `difficulties.yml` 及旧 4 目录 YAML 一键迁移至 v2 统一格式（自动生成 `.v1.bak` / `legacy_v1_backup` 备份）；权限 `maydungeon.command.admin.migrate` |
 | `/md admin tp <实例ID>` | 传送到指定副本实例 |
 | `/md admin kick <玩家>` | 将玩家踢出副本 |
 | `/md admin forceend <实例ID>` | 强制结束副本实例 |
